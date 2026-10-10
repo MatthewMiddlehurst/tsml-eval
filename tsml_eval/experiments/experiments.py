@@ -952,10 +952,17 @@ def run_clustering_experiment(
         )
 
     start = int(round(time.time() * 1000))
+    train_probs = None
     if callable(getattr(clusterer, "predict_proba", None)):
-        train_probs = clusterer.predict_proba(X_train)
-        train_preds = np.argmax(train_probs, axis=1)
-    else:
+        try:
+            train_probs = clusterer.predict_proba(X_train)
+            train_preds = np.argmax(train_probs, axis=1)
+        except NotImplementedError:
+            # transductive clusterers i.e. TimeSeriesAgglomerative cannot predict,
+            # use the labels found in fit for the train predictions
+            if not hasattr(clusterer, "labels_"):
+                raise
+    if train_probs is None:
         train_preds = (
             clusterer.labels_
             if hasattr(clusterer, "labels_")
