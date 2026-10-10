@@ -111,7 +111,6 @@ shapelet_based_classifiers = [
     ["randomshapeletforestclassifier", "randomshapeletforest", "rsf"],
     ["sastclassifier", "sast"],
     ["rsastclassifier", "rsast"],
-    ["learningshapeletclassifier", "ls"],
 ]
 vector_classifiers = [
     ["rotationforestclassifier", "rotationforest", "rotf"],
@@ -906,10 +905,6 @@ def _set_classifier_shapelet_based(
         from aeon.classification.shapelet_based import RSASTClassifier
 
         return RSASTClassifier(random_state=random_state, n_jobs=n_jobs, **kwargs)
-    elif c == "learningshapeletclassifier" or c == "ls":
-        from aeon.classification.shapelet_based import LearningShapeletClassifier
-
-        return LearningShapeletClassifier(random_state=random_state, **kwargs)
     else:
         raise ValueError(f"UNKNOWN CLASSIFIER: {c} in get_classifier_by_name")
 
