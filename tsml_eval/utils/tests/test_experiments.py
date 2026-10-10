@@ -55,9 +55,9 @@ def test_estimator_attributes_to_file():
 
     assert os.path.exists(test_dir + "ShapeletTransformClassifier.txt")
     assert os.path.exists(test_dir + "estimator/estimator.txt")
-    assert os.path.exists(test_dir + "_estimator/_estimator.txt")
-    assert os.path.exists(test_dir + "_estimator/_base_estimator/_base_estimator.txt")
-    assert os.path.exists(test_dir + "_estimator/_pcas_0_0/_pcas_0_0.txt")
+    assert os.path.exists(test_dir + "estimator_/estimator_.txt")
+    assert os.path.exists(test_dir + "estimator_/_base_estimator/_base_estimator.txt")
+    assert os.path.exists(test_dir + "estimator_/estimators__0/estimators__0.txt")
 
 
 def test_max_depth():
@@ -74,11 +74,11 @@ def test_max_depth():
 
     assert os.path.exists(test_dir + "ShapeletTransformClassifier.txt")
     assert os.path.exists(test_dir + "estimator/estimator.txt")
-    assert os.path.exists(test_dir + "_estimator/_estimator.txt")
+    assert os.path.exists(test_dir + "estimator_/estimator_.txt")
     assert not os.path.exists(
-        test_dir + "_estimator/_base_estimator/_base_estimator.txt"
+        test_dir + "estimator_/_base_estimator/_base_estimator.txt"
     )
-    assert not os.path.exists(test_dir + "_estimator/_pcas_0_0/_pcas_0_0.txt")
+    assert not os.path.exists(test_dir + "estimator_/estimators__0/estimators__0.txt")
 
 
 def test_max_list_shape():
@@ -91,10 +91,10 @@ def test_max_list_shape():
     estimator.fit(X, y)
 
     test_dir = _TEST_OUTPUT_PATH + "/attribute_writing_max_list_shape/"
-    estimator_attributes_to_file(estimator, test_dir, max_list_shape=1)
+    estimator_attributes_to_file(estimator, test_dir, max_list_shape=0)
 
     assert os.path.exists(test_dir + "ShapeletTransformClassifier.txt")
     assert os.path.exists(test_dir + "estimator/estimator.txt")
-    assert os.path.exists(test_dir + "_estimator/_estimator.txt")
-    assert os.path.exists(test_dir + "_estimator/_base_estimator/_base_estimator.txt")
-    assert not os.path.exists(test_dir + "_estimator/_pcas_0_0/_pcas_0_0.txt")
+    assert os.path.exists(test_dir + "estimator_/estimator_.txt")
+    assert os.path.exists(test_dir + "estimator_/_base_estimator/_base_estimator.txt")
+    assert not os.path.exists(test_dir + "estimator_/estimators__0/estimators__0.txt")
