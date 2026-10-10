@@ -116,6 +116,7 @@ vector_classifiers = [
     ["rotationforestclassifier", "rotationforest", "rotf"],
     ["ridgeclassifiercv", "ridgecv"],
     ["logisticregression", "logistic"],
+    ["prevalidatedridgeclassifier", "prevalidatedridge"],
 ]
 
 
@@ -927,5 +928,9 @@ def _set_classifier_vector(c, random_state, n_jobs, fit_contract, checkpoint, kw
         from sklearn.linear_model import LogisticRegression
 
         return LogisticRegression(random_state=random_state, n_jobs=n_jobs, **kwargs)
+    elif c == "prevalidatedridgeclassifier" or c == "prevalidatedridge":
+        from aeon.classification.sklearn import PrevalidatedRidgeClassifier
+
+        return PrevalidatedRidgeClassifier(**kwargs)
     else:
         raise ValueError(f"UNKNOWN CLASSIFIER: {c} in get_classifier_by_name")
