@@ -825,7 +825,7 @@ def _set_classifier_interval_based(
             None,
             FunctionTransformer(func=first_order_differences_3d, validate=False),
             PeriodogramTransformer(),
-            ARCoefficientTransformer(replace_nan=True),
+            ARCoefficientTransformer(min_values=1, replace_nan=True),
         ]
 
         return RandomIntervalClassifier(
