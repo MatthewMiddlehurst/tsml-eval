@@ -41,7 +41,7 @@ classifiers = [
 ]
 requires-python = ">=3.12,<3.16"
 dependencies = [
-    "aeon>=1.0.0,<1.6.0",
+    "aeon>=1.0.0,<1.7.0",
     "scikit-learn>=1.4.0,<1.10.0",
     "matplotlib",
     "seaborn",
@@ -52,15 +52,18 @@ dependencies = [
 [project.optional-dependencies]
 all_extras = [
     "aeon[all_extras]",
+    "aeon-neuro>=0.1.0; python_version < '3.14'",
     "tsml[all_extras]",
     "xgboost",
 ]
 unstable_extras = [
     "aeon[unstable_extras]",
-    "tsml[unstable_extras]",
 ]
 deep_learning = [
     "aeon[dl]",
+]
+neuro = [
+    "aeon-neuro>=0.1.0; python_version < '3.14'",
 ]
 
 dev = [

@@ -30,6 +30,15 @@ deep_learning_classifiers = [
     ["individualliteclassifier", "individuallite"],
     ["disjointcnnclassifier", "disjointcnn"],
 ]
+neuro_classifiers = [
+    ["eegnetclassifier", "eegnet"],
+    ["deepconvnetclassifier", "deepconvnet"],
+    ["riemannianmdmclassifier", "riemannianmdm"],
+    ["riemannianknnclassifier", "riemannianknn"],
+    ["cspclassifier", "csp", "csplda"],
+    ["csprandomforestclassifier", "csprandomforest", "csprf"],
+    ["cspsvmclassifier", "cspsvm"],
+]
 dictionary_based_classifiers = [
     ["bossensemble", "boss"],
     "individualboss",
@@ -111,12 +120,12 @@ shapelet_based_classifiers = [
     ["randomshapeletforestclassifier", "randomshapeletforest", "rsf"],
     ["sastclassifier", "sast"],
     ["rsastclassifier", "rsast"],
-    ["learningshapeletclassifier", "ls"],
 ]
 vector_classifiers = [
     ["rotationforestclassifier", "rotationforest", "rotf"],
     ["ridgeclassifiercv", "ridgecv"],
     ["logisticregression", "logistic"],
+    ["prevalidatedridgeclassifier", "prevalidatedridge"],
 ]
 
 
@@ -189,6 +198,8 @@ def get_classifier_by_name(
         return _set_classifier_interval_based(
             c, random_state, n_jobs, fit_contract, checkpoint, kwargs
         )
+    elif str_in_nested_list(neuro_classifiers, c):
+        return _set_classifier_neuro(c, random_state, n_jobs, kwargs)
     elif str_in_nested_list(other_classifiers, c):
         return _set_classifier_other(
             c, random_state, n_jobs, fit_contract, checkpoint, kwargs
@@ -200,6 +211,10 @@ def get_classifier_by_name(
     elif str_in_nested_list(vector_classifiers, c):
         return _set_classifier_vector(
             c, random_state, n_jobs, fit_contract, checkpoint, kwargs
+        )
+    elif c.startswith("neuro:"):
+        return _set_classifier_neuro_by_class_name(
+            c.removeprefix("neuro:"), random_state, n_jobs, kwargs
         )
     else:
         raise ValueError(f"UNKNOWN CLASSIFIER: {c} in get_classifier_by_name")
@@ -344,6 +359,80 @@ def _set_classifier_deep_learning(
         return DisjointCNNClassifier(random_state=random_state, **kwargs)
     else:
         raise ValueError(f"UNKNOWN CLASSIFIER: {c} in get_classifier_by_name")
+
+
+def _set_classifier_neuro(c, random_state, n_jobs, kwargs):
+    if c in ("eegnetclassifier", "eegnet"):
+        from aeon_neuro.classification.deep_learning import EEGNetClassifier
+
+        return EEGNetClassifier(random_state=random_state, **kwargs)
+    elif c in ("deepconvnetclassifier", "deepconvnet"):
+        from aeon_neuro.classification.deep_learning import DeepConvNetClassifier
+
+        return DeepConvNetClassifier(random_state=random_state, **kwargs)
+    elif c in ("riemannianmdmclassifier", "riemannianmdm"):
+        from aeon_neuro.classification.distance_based import RiemannianMDMClassifier
+
+        return RiemannianMDMClassifier(n_jobs=n_jobs, **kwargs)
+    elif c in ("riemannianknnclassifier", "riemannianknn"):
+        from aeon_neuro.classification.distance_based import RiemannianKNNClassifier
+
+        return RiemannianKNNClassifier(n_jobs=n_jobs, **kwargs)
+    elif c in (
+        "cspclassifier",
+        "csp",
+        "csplda",
+        "csprandomforestclassifier",
+        "csprandomforest",
+        "csprf",
+        "cspsvmclassifier",
+        "cspsvm",
+    ):
+        from aeon_neuro.classification.feature_based import CSPClassifier
+
+        if c in ("csprandomforestclassifier", "csprandomforest", "csprf"):
+            from sklearn.ensemble import RandomForestClassifier
+
+            classifier = RandomForestClassifier(
+                random_state=random_state, n_jobs=n_jobs
+            )
+        elif c in ("cspsvmclassifier", "cspsvm"):
+            from sklearn.svm import SVC
+
+            classifier = SVC(
+                kernel="linear", probability=True, random_state=random_state
+            )
+        else:
+            classifier = None
+        kwargs.setdefault("classifier", classifier)
+        return CSPClassifier(random_state=random_state, **kwargs)
+    else:
+        raise ValueError(f"UNKNOWN CLASSIFIER: {c} in get_classifier_by_name")
+
+
+def _set_classifier_neuro_by_class_name(c, random_state, n_jobs, kwargs):
+    """Create an aeon-neuro classifier exported by its classification package."""
+    from inspect import isclass, signature
+
+    from aeon.classification.base import BaseClassifier
+    from aeon_neuro import classification
+
+    for classifier in vars(classification).values():
+        if (
+            isclass(classifier)
+            and classifier.__name__.casefold() == c
+            and classifier.__module__.startswith("aeon_neuro.")
+            and issubclass(classifier, BaseClassifier)
+        ):
+            parameters = signature(classifier).parameters
+            init_kwargs = kwargs.copy()
+            if "random_state" in parameters:
+                init_kwargs.setdefault("random_state", random_state)
+            if "n_jobs" in parameters:
+                init_kwargs.setdefault("n_jobs", n_jobs)
+            return classifier(**init_kwargs)
+
+    raise ValueError(f"UNKNOWN CLASSIFIER: neuro:{c} in get_classifier_by_name")
 
 
 def _set_classifier_dictionary_based(
@@ -491,6 +580,7 @@ def _set_classifier_distance_based(
             estimator=KNeighborsTimeSeriesClassifier(),
             param_grid=param_grid,
             scoring="accuracy",
+            n_jobs=n_jobs,
             **kwargs,
         )
     elif c == "grailclassifier" or c == "grail":
@@ -639,6 +729,7 @@ def _set_classifier_interval_based(
             n_estimators=500,
             random_state=random_state,
             n_jobs=n_jobs,
+            time_limit_in_minutes=fit_contract,
             **kwargs,
         )
     elif c == "randomintervalspectralensembleclassifier" or c == "rise":
@@ -649,6 +740,7 @@ def _set_classifier_interval_based(
         return RandomIntervalSpectralEnsembleClassifier(
             random_state=random_state,
             n_jobs=n_jobs,
+            time_limit_in_minutes=fit_contract,
             **kwargs,
         )
     elif c == "tsf-500":
@@ -658,6 +750,7 @@ def _set_classifier_interval_based(
             n_estimators=500,
             random_state=random_state,
             n_jobs=n_jobs,
+            time_limit_in_minutes=fit_contract,
             **kwargs,
         )
     elif c == "timeseriesforestclassifier" or c == "tsf":
@@ -666,6 +759,7 @@ def _set_classifier_interval_based(
         return TimeSeriesForestClassifier(
             random_state=random_state,
             n_jobs=n_jobs,
+            time_limit_in_minutes=fit_contract,
             **kwargs,
         )
     elif c == "cif-500":
@@ -675,6 +769,7 @@ def _set_classifier_interval_based(
             n_estimators=500,
             random_state=random_state,
             n_jobs=n_jobs,
+            time_limit_in_minutes=fit_contract,
             **kwargs,
         )
     elif c == "canonicalintervalforestclassifier" or c == "cif":
@@ -683,6 +778,7 @@ def _set_classifier_interval_based(
         return CanonicalIntervalForestClassifier(
             random_state=random_state,
             n_jobs=n_jobs,
+            time_limit_in_minutes=fit_contract,
             **kwargs,
         )
     elif c == "stsf-500":
@@ -692,6 +788,7 @@ def _set_classifier_interval_based(
             n_estimators=500,
             random_state=random_state,
             n_jobs=n_jobs,
+            time_limit_in_minutes=fit_contract,
             **kwargs,
         )
     elif c == "supervisedtimeseriesforest" or c == "stsf":
@@ -700,6 +797,7 @@ def _set_classifier_interval_based(
         return SupervisedTimeSeriesForest(
             random_state=random_state,
             n_jobs=n_jobs,
+            time_limit_in_minutes=fit_contract,
             **kwargs,
         )
     elif c == "drcif-500":
@@ -887,7 +985,7 @@ def _set_classifier_shapelet_based(
     elif c == "rdstclassifier" or c == "rdst":
         from aeon.classification.shapelet_based import RDSTClassifier
 
-        return RDSTClassifier(random_state=random_state, **kwargs)
+        return RDSTClassifier(random_state=random_state, n_jobs=n_jobs, **kwargs)
     elif (
         c == "randomshapeletforestclassifier"
         or c == "randomshapeletforest"
@@ -906,10 +1004,6 @@ def _set_classifier_shapelet_based(
         from aeon.classification.shapelet_based import RSASTClassifier
 
         return RSASTClassifier(random_state=random_state, n_jobs=n_jobs, **kwargs)
-    elif c == "learningshapeletclassifier" or c == "ls":
-        from aeon.classification.shapelet_based import LearningShapeletClassifier
-
-        return LearningShapeletClassifier(random_state=random_state, **kwargs)
     else:
         raise ValueError(f"UNKNOWN CLASSIFIER: {c} in get_classifier_by_name")
 
@@ -931,6 +1025,10 @@ def _set_classifier_vector(c, random_state, n_jobs, fit_contract, checkpoint, kw
     elif c == "logisticregression" or c == "logistic":
         from sklearn.linear_model import LogisticRegression
 
-        return LogisticRegression(random_state=random_state, n_jobs=n_jobs, **kwargs)
+        return LogisticRegression(random_state=random_state, **kwargs)
+    elif c == "prevalidatedridgeclassifier" or c == "prevalidatedridge":
+        from aeon.classification.sklearn import PrevalidatedRidgeClassifier
+
+        return PrevalidatedRidgeClassifier(**kwargs)
     else:
         raise ValueError(f"UNKNOWN CLASSIFIER: {c} in get_classifier_by_name")
