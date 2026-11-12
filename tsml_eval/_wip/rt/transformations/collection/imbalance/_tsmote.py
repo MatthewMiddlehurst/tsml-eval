@@ -11,7 +11,7 @@ from collections.abc import Callable
 import numpy as np
 from sklearn.utils import check_random_state
 
-from tsml_eval._wip.rt.classification.distance_based import KNeighborsTimeSeriesClassifier
+from aeon.classification.distance_based import KNeighborsTimeSeriesClassifier
 from aeon.transformations.collection import BaseCollectionTransformer
 
 
