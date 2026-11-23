@@ -8,42 +8,12 @@ only uses its own cases to fit its local models.
 __maintainer__ = ["MatthewMiddlehurst"]
 
 import numpy as np
+from aeon.transformations.collection import Normalizer
 from aeon.transformations.collection.convolution_based._rocket import (
     _apply_kernels,
     _generate_kernels,
 )
 from numba import get_num_threads, set_num_threads
-
-
-def _encode_labels(y, classes):
-    """Encode class labels as integers, in numeric order if the labels are numbers.
-
-    The reference code label encodes the numeric labels of the UCR archive files, so
-    its class order is numeric, while aeon sorts labels as strings, putting "10"
-    before "2". The client split and kernel selection depend on the class order.
-
-    Parameters
-    ----------
-    y : np.ndarray
-        The class labels.
-    classes : np.ndarray
-        The unique class labels.
-
-    Returns
-    -------
-    y_encoded : np.ndarray
-        The integer class labels.
-    ordered_classes : np.ndarray
-        The class label of each integer label.
-    """
-    try:
-        order = np.argsort([float(c) for c in classes], kind="stable")
-    except (TypeError, ValueError):
-        order = np.arange(len(classes))
-
-    ordered_classes = classes[order]
-    index = {c: i for i, c in enumerate(ordered_classes)}
-    return np.array([index[label] for label in y]), ordered_classes
 
 
 def _split_clients(X, y, n_clients, rng, repeat_initial):
@@ -115,14 +85,8 @@ def _split_clients(X, y, n_clients, rng, repeat_initial):
 
 
 def _normalise(X):
-    """Normalise each series and channel as the sktime ROCKET transform does.
-
-    The reference code uses sktime's ``Rocket``, which divides by the standard
-    deviation plus 1e-8. aeon's ``Normalizer`` divides by the standard deviation
-    only, which changes some float32 values of series that are not z-normalised.
-    """
-    X = (X - X.mean(axis=-1, keepdims=True)) / (X.std(axis=-1, keepdims=True) + 1e-8)
-    return X.astype(np.float32)
+    """Normalise each series and channel, as the ROCKET transform does."""
+    return np.asarray(Normalizer().fit_transform(X), dtype=np.float32)
 
 
 def _seeded_rocket_ppv(X, seeds, n_jobs):
@@ -143,7 +107,7 @@ def _seeded_rocket_ppv(X, seeds, n_jobs):
     Returns
     -------
     ppv : np.ndarray
-        The PPV feature of each kernel, of shape ``(n_cases, len(seeds))``.
+        The float32 PPV feature of each kernel, of shape ``(n_cases, len(seeds))``.
     """
     kernels = [_generate_kernels(X.shape[2], 1, X.shape[1], int(s)) for s in seeds]
     kernels = tuple(np.concatenate(parts) for parts in zip(*kernels))
@@ -156,7 +120,7 @@ def _seeded_rocket_ppv(X, seeds, n_jobs):
         set_num_threads(prev_threads)
 
     # the transform outputs the PPV and max of each kernel in turn
-    return Xt[:, ::2].astype(np.float64)
+    return np.ascontiguousarray(Xt[:, ::2])
 
 
 class _SeededRocketFeatures:
@@ -195,7 +159,8 @@ def _federated_ridge(client_features, client_y, n_classes):
     Parameters
     ----------
     client_features : list of np.ndarray
-        The features of each client, each of shape ``(n_cases_c, n_features)``.
+        The float32 features of each client, each of shape ``(n_cases_c,
+        n_features)``. As in the reference code, ``X^T X`` is computed in float32.
     client_y : list of np.ndarray
         The integer class labels of each client.
     n_classes : int
@@ -211,8 +176,11 @@ def _federated_ridge(client_features, client_y, n_classes):
     """
     A_clients = [X.T @ X for X in client_features]
     b_clients = [X.T @ np.eye(n_classes)[y] for X, y in zip(client_features, client_y)]
-    A = np.sum(A_clients, axis=0)
-    b = np.sum(b_clients, axis=0)
+    A = np.zeros(A_clients[0].shape)
+    b = np.zeros(b_clients[0].shape)
+    for A_c, b_c in zip(A_clients, b_clients):
+        A += A_c
+        b += b_c
 
     weighted_lambdas = []
     accuracies = []

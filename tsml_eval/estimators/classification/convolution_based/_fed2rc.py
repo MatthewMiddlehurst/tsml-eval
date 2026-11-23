@@ -10,7 +10,6 @@ from sklearn.linear_model import RidgeClassifierCV
 from sklearn.utils import check_random_state
 
 from tsml_eval.estimators.classification.convolution_based._federated_utils import (
-    _encode_labels,
     _federated_ridge,
     _normalise,
     _seeded_rocket_ppv,
@@ -67,8 +66,6 @@ class Fed2RCClassifier(BaseClassifier):
         The seeds of the kernels in the final model.
     coef_ : np.ndarray
         The weights of the final model, of shape ``(len(seeds_), n_classes_)``.
-        The classes are in numeric order if the labels are numbers, as in the
-        reference code, and otherwise in the order of ``classes_``.
     lambda_ : float
         The regularisation parameter selected for the final model.
     n_rounds_ : int
@@ -127,7 +124,7 @@ class Fed2RCClassifier(BaseClassifier):
 
         self._n_jobs = check_n_jobs(self.n_jobs)
         rng = check_random_state(self.random_state)
-        y, self._ordered_classes = _encode_labels(y, self.classes_)
+        y = np.array([self._class_dictionary[label] for label in y])
 
         n_top = self.n_kernels // self.n_clients
         clients = _split_clients(X, y, self.n_clients, rng, repeat_initial=False)
@@ -167,7 +164,7 @@ class Fed2RCClassifier(BaseClassifier):
 
     def _predict(self, X):
         Xt = _seeded_rocket_ppv(_normalise(X), self.seeds_, self._n_jobs)
-        return self._ordered_classes[np.argmax(Xt @ self.coef_, axis=1)]
+        return self.classes_[np.argmax(Xt @ self.coef_, axis=1)]
 
     @classmethod
     def _get_test_params(cls, parameter_set="default"):

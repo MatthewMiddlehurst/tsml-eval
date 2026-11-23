@@ -6,12 +6,10 @@ __all__ = ["FROCKSClassifier"]
 import numpy as np
 from aeon.classification import BaseClassifier
 from aeon.utils.validation import check_n_jobs
-from scipy.optimize import minimize
-from scipy.special import expit
+from sklearn.linear_model import LogisticRegression
 from sklearn.utils import check_random_state
 
 from tsml_eval.estimators.classification.convolution_based._federated_utils import (
-    _encode_labels,
     _normalise,
     _seeded_rocket_ppv,
     _SeededRocketFeatures,
@@ -39,9 +37,7 @@ class FROCKSClassifier(BaseClassifier):
     This follows the reference implementation [2]_, including its split of the data
     between clients. The intercept also carries over between rounds as in the
     reference code: each round it is set to the previous intercept plus the sum of
-    the client intercepts, divided by the number of clients. The local logistic
-    regression is fitted as by ``LogisticRegression()`` in scikit-learn 1.2.0, the
-    version the reference code uses.
+    the client intercepts, divided by the number of clients.
 
     Parameters
     ----------
@@ -63,7 +59,8 @@ class FROCKSClassifier(BaseClassifier):
     seeds_ : np.ndarray
         The seeds of the kernels in the final model.
     coef_ : np.ndarray
-        The averaged weight of each kernel in the final model.
+        The averaged weight of each kernel in the final model, of shape
+        ``(1, len(seeds_))``.
     intercept_ : float
         The intercept of the final model.
     n_rounds_ : int
@@ -127,7 +124,7 @@ class FROCKSClassifier(BaseClassifier):
 
         self._n_jobs = check_n_jobs(self.n_jobs)
         rng = check_random_state(self.random_state)
-        y, self._ordered_classes = _encode_labels(y, self.classes_)
+        y = np.array([self._class_dictionary[label] for label in y])
 
         n_top = self.n_kernels // self.n_clients
         clients = _split_clients(X, y, self.n_clients, rng, repeat_initial=True)
@@ -147,12 +144,12 @@ class FROCKSClassifier(BaseClassifier):
             client_weights = []
             selected_seeds = []
             for c, idx in enumerate(clients):
-                w, b = _logistic_regression(
-                    features[c].transform(client_seeds[c]), y[idx]
-                )
+                lr = LogisticRegression()
+                lr.fit(features[c].transform(client_seeds[c]), y[idx])
 
+                w = lr.coef_[0]
                 top = np.argsort(-np.abs(w))[:n_top]
-                intercept += b
+                intercept += lr.intercept_[0]
                 client_weights.append(w[top])
                 selected_seeds.append(client_seeds[c][top])
 
@@ -164,12 +161,12 @@ class FROCKSClassifier(BaseClassifier):
             seeds = np.unique(selected_seeds)
             weights = np.array(
                 [client_weights[selected_seeds == s].mean() for s in seeds]
-            )
+            ).reshape(1, -1)
             client_seeds = [seeds] * self.n_clients
 
             if (
                 previous_weights is not None
-                and len(weights) == len(previous_weights)
+                and weights.shape == previous_weights.shape
                 and np.all(np.isclose(previous_weights, weights))
             ):
                 break
@@ -182,9 +179,8 @@ class FROCKSClassifier(BaseClassifier):
 
     def _predict(self, X):
         Xt = _seeded_rocket_ppv(_normalise(X), self.seeds_, self._n_jobs)
-        return self._ordered_classes[
-            (Xt @ self.coef_ + self.intercept_ > 0).astype(int)
-        ]
+        scores = (Xt @ self.coef_.T)[:, 0] + self.intercept_
+        return self.classes_[(scores > 0).astype(int)]
 
     @classmethod
     def _get_test_params(cls, parameter_set="default"):
@@ -202,46 +198,3 @@ class FROCKSClassifier(BaseClassifier):
             Parameters to create testing instances of the class.
         """
         return {"n_kernels": 20, "n_rounds": 3}
-
-
-def _logistic_regression(X, y):
-    """Fit a binary logistic regression as scikit-learn 1.2.0 does by default.
-
-    ``LogisticRegression()`` in scikit-learn 1.2.0 minimises the summed log loss plus
-    ``||w||^2 / 2`` with L-BFGS, stopping when the largest gradient entry is at most
-    1e-4 or after 100 iterations. Later versions minimise the mean log loss with the
-    same tolerance, so the solver stops at a different point, which changes the
-    kernels FROCKS selects.
-
-    Parameters
-    ----------
-    X : np.ndarray
-        Features of shape ``(n_cases, n_features)``.
-    y : np.ndarray
-        Class labels in ``{0, 1}``.
-
-    Returns
-    -------
-    w : np.ndarray
-        The weights.
-    b : float
-        The intercept.
-    """
-    n_features = X.shape[1]
-
-    def loss_gradient(params):
-        w = params[:n_features]
-        z = X @ w + params[n_features]
-        residual = expit(z) - y
-        loss = np.sum(np.logaddexp(0, z) - y * z) + 0.5 * (w @ w)
-        gradient = np.append(X.T @ residual + w, residual.sum())
-        return loss, gradient
-
-    params = minimize(
-        loss_gradient,
-        np.zeros(n_features + 1),
-        method="L-BFGS-B",
-        jac=True,
-        options={"gtol": 1e-4, "maxiter": 100},
-    ).x
-    return params[:n_features], params[n_features]
