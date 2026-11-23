@@ -8,7 +8,6 @@ only uses its own cases to fit its local models.
 __maintainer__ = ["MatthewMiddlehurst"]
 
 import numpy as np
-from aeon.transformations.collection import Normalizer
 from aeon.transformations.collection.convolution_based._rocket import (
     _apply_kernels,
     _generate_kernels,
@@ -16,7 +15,38 @@ from aeon.transformations.collection.convolution_based._rocket import (
 from numba import get_num_threads, set_num_threads
 
 
-def _split_clients(y, n_clients, rng, repeat_initial):
+def _encode_labels(y, classes):
+    """Encode class labels as integers, in numeric order if the labels are numbers.
+
+    The reference code label encodes the numeric labels of the UCR archive files, so
+    its class order is numeric, while aeon sorts labels as strings, putting "10"
+    before "2". The client split and kernel selection depend on the class order.
+
+    Parameters
+    ----------
+    y : np.ndarray
+        The class labels.
+    classes : np.ndarray
+        The unique class labels.
+
+    Returns
+    -------
+    y_encoded : np.ndarray
+        The integer class labels.
+    ordered_classes : np.ndarray
+        The class label of each integer label.
+    """
+    try:
+        order = np.argsort([float(c) for c in classes], kind="stable")
+    except (TypeError, ValueError):
+        order = np.arange(len(classes))
+
+    ordered_classes = classes[order]
+    index = {c: i for i, c in enumerate(ordered_classes)}
+    return np.array([index[label] for label in y]), ordered_classes
+
+
+def _split_clients(X, y, n_clients, rng, repeat_initial):
     """Split case indices between clients using the reference uniform split.
 
     Every client first receives one case of each class. The remaining cases are then
@@ -24,6 +54,8 @@ def _split_clients(y, n_clients, rng, repeat_initial):
 
     Parameters
     ----------
+    X : np.ndarray
+        The series, of shape ``(n_cases, n_channels, n_timepoints)``.
     y : np.ndarray
         Integer class labels.
     n_clients : int
@@ -33,15 +65,24 @@ def _split_clients(y, n_clients, rng, repeat_initial):
     repeat_initial : bool
         If True, as in the FROCKS and DROCKS code, the cases handed out first are
         dealt again along with all other cases, so they appear twice, and a class with
-        fewer cases than clients reuses its cases. If False, as in the Fed2RC code,
-        each case is used once, and a class with fewer cases than clients only goes to
-        the first clients.
+        fewer cases than clients reuses its cases. If False, as in the Fed2RC code, a
+        case is skipped if a case with the same series and label has already been
+        given out, and a class with fewer cases than clients only goes to the first
+        clients. If no class has at least ``n_clients`` cases, some clients would get
+        no cases, and the cases are instead shuffled and split into ``n_clients``
+        equal parts, dropping any remainder, as the Fed2RC code does for such
+        datasets.
 
     Returns
     -------
     clients : list of np.ndarray
         The case indices of each client.
     """
+    if not repeat_initial and np.bincount(y).max() < n_clients:
+        shuffled = rng.permutation(len(y))
+        n = len(y) // n_clients
+        return [shuffled[i * n : (i + 1) * n] for i in range(n_clients)]
+
     shuffled = rng.permutation(len(y))
 
     clients = [[] for _ in range(n_clients)]
@@ -53,11 +94,19 @@ def _split_clients(y, n_clients, rng, repeat_initial):
         for i in range(n):
             clients[i].append(indices[i % len(indices)])
 
-    dealt = set() if repeat_initial else {i for client in clients for i in client}
+    # the Fed2RC code compares values, so duplicated cases are only used once.
+    # adding 0.0 makes -0.0 and 0.0 equal, as they are for np.array_equal
+    if not repeat_initial:
+        keys = [(y[i], (X[i] + 0.0).tobytes()) for i in range(len(y))]
+        dealt = {keys[i] for client in clients for i in client}
+
     sizes = [len(client) for client in clients]
     for i in shuffled:
-        if i in dealt:
-            continue
+        if not repeat_initial:
+            if keys[i] in dealt:
+                continue
+            dealt.add(keys[i])
+
         smallest = int(np.argmin(sizes))
         clients[smallest].append(i)
         sizes[smallest] += 1
@@ -66,8 +115,14 @@ def _split_clients(y, n_clients, rng, repeat_initial):
 
 
 def _normalise(X):
-    """Normalise each series and channel, as the ROCKET transform does."""
-    return np.asarray(Normalizer().fit_transform(X), dtype=np.float32)
+    """Normalise each series and channel as the sktime ROCKET transform does.
+
+    The reference code uses sktime's ``Rocket``, which divides by the standard
+    deviation plus 1e-8. aeon's ``Normalizer`` divides by the standard deviation
+    only, which changes some float32 values of series that are not z-normalised.
+    """
+    X = (X - X.mean(axis=-1, keepdims=True)) / (X.std(axis=-1, keepdims=True) + 1e-8)
+    return X.astype(np.float32)
 
 
 def _seeded_rocket_ppv(X, seeds, n_jobs):

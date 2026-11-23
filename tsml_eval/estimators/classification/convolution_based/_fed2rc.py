@@ -10,6 +10,7 @@ from sklearn.linear_model import RidgeClassifierCV
 from sklearn.utils import check_random_state
 
 from tsml_eval.estimators.classification.convolution_based._federated_utils import (
+    _encode_labels,
     _federated_ridge,
     _normalise,
     _seeded_rocket_ppv,
@@ -47,8 +48,9 @@ class Fed2RCClassifier(BaseClassifier):
 
     Parameters
     ----------
-    n_kernels : int, default=1000
-        Number of kernels each client starts with.
+    n_kernels : int, default=10000
+        Number of kernels each client starts with. 10000 is the setting of the main
+        results in [1]_.
     n_clients : int, default=4
         Number of simulated clients the training data is split between.
     n_rounds : int, default=100
@@ -65,6 +67,8 @@ class Fed2RCClassifier(BaseClassifier):
         The seeds of the kernels in the final model.
     coef_ : np.ndarray
         The weights of the final model, of shape ``(len(seeds_), n_classes_)``.
+        The classes are in numeric order if the labels are numbers, as in the
+        reference code, and otherwise in the order of ``classes_``.
     lambda_ : float
         The regularisation parameter selected for the final model.
     n_rounds_ : int
@@ -103,7 +107,7 @@ class Fed2RCClassifier(BaseClassifier):
 
     def __init__(
         self,
-        n_kernels=1000,
+        n_kernels=10000,
         n_clients=4,
         n_rounds=100,
         n_jobs=1,
@@ -123,10 +127,10 @@ class Fed2RCClassifier(BaseClassifier):
 
         self._n_jobs = check_n_jobs(self.n_jobs)
         rng = check_random_state(self.random_state)
-        y = np.array([self._class_dictionary[label] for label in y])
+        y, self._ordered_classes = _encode_labels(y, self.classes_)
 
         n_top = self.n_kernels // self.n_clients
-        clients = _split_clients(y, self.n_clients, rng, repeat_initial=False)
+        clients = _split_clients(X, y, self.n_clients, rng, repeat_initial=False)
         features = [_SeededRocketFeatures(X[idx], self._n_jobs) for idx in clients]
 
         client_seeds = [
@@ -163,7 +167,7 @@ class Fed2RCClassifier(BaseClassifier):
 
     def _predict(self, X):
         Xt = _seeded_rocket_ppv(_normalise(X), self.seeds_, self._n_jobs)
-        return self.classes_[np.argmax(Xt @ self.coef_, axis=1)]
+        return self._ordered_classes[np.argmax(Xt @ self.coef_, axis=1)]
 
     @classmethod
     def _get_test_params(cls, parameter_set="default"):

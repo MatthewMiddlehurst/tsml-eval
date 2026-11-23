@@ -10,6 +10,7 @@ from aeon.utils.validation import check_n_jobs
 from sklearn.utils import check_random_state
 
 from tsml_eval.estimators.classification.convolution_based._federated_utils import (
+    _encode_labels,
     _federated_ridge,
     _split_clients,
 )
@@ -38,9 +39,10 @@ class MiniFed2RCClassifier(BaseClassifier):
 
     Parameters
     ----------
-    n_kernels : int, default=924
+    n_kernels : int, default=10000
         Number of MiniRocket features. Rounded down to a multiple of 84, with a
-        minimum of 84.
+        minimum of 84, so the default gives 9996. This is the best of the settings
+        in the published results [2]_.
     n_clients : int, default=4
         Number of simulated clients the training data is split between.
     n_jobs : int, default=1
@@ -56,6 +58,8 @@ class MiniFed2RCClassifier(BaseClassifier):
         The MiniRocket transform with the averaged client biases.
     coef_ : np.ndarray
         The weights of the final model, of shape ``(n_features, n_classes_)``.
+        The classes are in numeric order if the labels are numbers, as in the
+        reference code, and otherwise in the order of ``classes_``.
     lambda_ : float
         The regularisation parameter selected for the final model.
 
@@ -92,7 +96,7 @@ class MiniFed2RCClassifier(BaseClassifier):
 
     def __init__(
         self,
-        n_kernels=924,
+        n_kernels=10000,
         n_clients=4,
         n_jobs=1,
         random_state=None,
@@ -107,9 +111,9 @@ class MiniFed2RCClassifier(BaseClassifier):
     def _fit(self, X, y):
         self._n_jobs = check_n_jobs(self.n_jobs)
         rng = check_random_state(self.random_state)
-        y = np.array([self._class_dictionary[label] for label in y])
+        y, self._ordered_classes = _encode_labels(y, self.classes_)
 
-        clients = _split_clients(y, self.n_clients, rng, repeat_initial=False)
+        clients = _split_clients(X, y, self.n_clients, rng, repeat_initial=False)
 
         # clients must share a seed so their kernels and channels match
         if self.random_state is None or isinstance(
@@ -142,7 +146,7 @@ class MiniFed2RCClassifier(BaseClassifier):
 
     def _predict(self, X):
         Xt = self.transformer_.transform(X).astype(np.float64)
-        return self.classes_[np.argmax(Xt @ self.coef_, axis=1)]
+        return self._ordered_classes[np.argmax(Xt @ self.coef_, axis=1)]
 
     @classmethod
     def _get_test_params(cls, parameter_set="default"):

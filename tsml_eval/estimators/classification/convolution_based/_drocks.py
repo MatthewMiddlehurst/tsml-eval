@@ -10,6 +10,7 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.utils import check_random_state
 
 from tsml_eval.estimators.classification.convolution_based._federated_utils import (
+    _encode_labels,
     _normalise,
     _seeded_rocket_ppv,
     _SeededRocketFeatures,
@@ -26,23 +27,27 @@ class DROCKSClassifier(BaseClassifier):
     and only its proportion of positive values (PPV) feature is used.
 
     Each client fits a linear model, a single layer MLP trained with Adam, on the PPV
-    features of the kernels it receives. It adds the ``n_kernels // n_clients``
-    kernels with the largest absolute weights to the list of selected kernels, and
-    passes the selected kernels, topped up to ``n_kernels`` with unused kernels, to
-    the next client. Training stops when a round selects no new kernel, or after
-    ``n_rounds`` rounds. The model of the last client is used to predict.
+    features of the kernels it receives, and adds the ``n_kernels // n_clients``
+    kernels with the largest absolute weights to the list of selected kernels. In the
+    first round, each client passes the selected kernels, topped up to ``n_kernels``
+    with kernels it has not used, on to the next client. In later rounds, every
+    client uses the kernels the last client received in the first round. Training
+    stops when a round selects no new kernel, or after ``n_rounds`` rounds. The model
+    of the last client is used to predict.
 
-    This follows the reference implementation [2]_, including its split of the data
-    between clients. As in the reference code, every client in the first round uses
-    the first client's kernels, and the final intercept is the sum of all intercepts
-    fitted during training divided by the number of clients. Only the first entry of
-    this intercept is added to every output, so it has no effect on multiclass
-    predictions.
+    This follows the version of the reference implementation [2]_ that produced the
+    published results, before commit ``fc06626``, including its split of the data
+    between clients. Later versions of the code keep the first client's kernels for
+    the whole first round and pass kernels on in later rounds. As in the reference
+    code, the final intercept is the sum of all intercepts fitted during training
+    divided by the number of clients. Only the first entry of this intercept is added
+    to every output, so it has no effect on multiclass predictions.
 
     Parameters
     ----------
-    n_kernels : int, default=1000
-        Number of kernels each client receives.
+    n_kernels : int, default=5000
+        Number of kernels each client receives. 5000 is the setting of the main
+        results in [1]_.
     n_clients : int, default=4
         Number of simulated clients the training data is split between.
     n_rounds : int, default=100
@@ -63,6 +68,8 @@ class DROCKSClassifier(BaseClassifier):
     coef_ : np.ndarray
         The weights of the final model, of shape ``(len(seeds_), 1)`` for binary
         problems and ``(len(seeds_), n_classes_)`` otherwise.
+        The classes are in numeric order if the labels are numbers, as in the
+        reference code, and otherwise in the order of ``classes_``.
     intercept_ : float
         The intercept of the final model.
     n_rounds_ : int
@@ -100,7 +107,7 @@ class DROCKSClassifier(BaseClassifier):
 
     def __init__(
         self,
-        n_kernels=1000,
+        n_kernels=5000,
         n_clients=4,
         n_rounds=100,
         max_iter=5000,
@@ -122,10 +129,10 @@ class DROCKSClassifier(BaseClassifier):
 
         self._n_jobs = check_n_jobs(self.n_jobs)
         rng = check_random_state(self.random_state)
-        y = np.array([self._class_dictionary[label] for label in y])
+        y, self._ordered_classes = _encode_labels(y, self.classes_)
 
         n_top = self.n_kernels // self.n_clients
-        clients = _split_clients(y, self.n_clients, rng, repeat_initial=True)
+        clients = _split_clients(X, y, self.n_clients, rng, repeat_initial=True)
         features = [_SeededRocketFeatures(X[idx], self._n_jobs) for idx in clients]
 
         mlp = MLPClassifier(
@@ -143,13 +150,9 @@ class DROCKSClassifier(BaseClassifier):
         selected = []
         selected_set = set()
         previous_selected = None
-        used_in_past_rounds = set()
-        used_so_far = set()
         for i in range(self.n_rounds):
             for c, idx in enumerate(clients):
-                used_seeds = seeds
-
-                mlp.fit(features[c].transform(used_seeds), y[idx])
+                mlp.fit(features[c].transform(seeds), y[idx])
 
                 w = mlp.coefs_[0]
                 intercept = intercept + mlp.intercepts_[0]
@@ -157,32 +160,28 @@ class DROCKSClassifier(BaseClassifier):
                 # rows of the largest absolute weights over all outputs
                 top = np.argsort(-np.abs(w), axis=None)[:n_top] // w.shape[1]
                 for t in top:
-                    if used_seeds[t] not in selected_set:
-                        selected.append(used_seeds[t])
-                        selected_set.add(used_seeds[t])
+                    if seeds[t] not in selected_set:
+                        selected.append(seeds[t])
+                        selected_set.add(seeds[t])
 
-                # every client in the first round uses the first kernels, after that
-                # each client passes the selected kernels on to the next, topped up
-                # with kernels not used by this client or in earlier rounds
-                if i > 0 or c == self.n_clients - 1:
-                    used_set = set(used_seeds)
+                # in the first round each client passes the selected kernels on,
+                # topped up with kernels it has not used. later rounds keep the
+                # kernels of the last client in the first round
+                if i == 0 and c < self.n_clients - 1:
+                    used = set(seeds)
                     new_seeds = []
                     seed = self.n_kernels
                     while len(selected) + len(new_seeds) < self.n_kernels:
-                        if seed not in used_set and seed not in used_in_past_rounds:
+                        if seed not in used:
                             new_seeds.append(seed)
                         seed += 1
                     seeds = selected + new_seeds
-
-                used_so_far.update(used_seeds)
-
-            used_in_past_rounds = set(used_so_far)
 
             if selected_set == previous_selected:
                 break
             previous_selected = set(selected_set)
 
-        self.seeds_ = np.array(used_seeds)
+        self.seeds_ = np.array(seeds)
         self.coef_ = mlp.coefs_[0]
         self.intercept_ = (intercept / self.n_clients)[0]
         self.n_rounds_ = i + 1
@@ -193,8 +192,8 @@ class DROCKSClassifier(BaseClassifier):
         Xt = _seeded_rocket_ppv(_normalise(X), self.seeds_, self._n_jobs)
         scores = Xt @ self.coef_ + self.intercept_
         if scores.shape[1] == 1:
-            return self.classes_[(scores[:, 0] > 0).astype(int)]
-        return self.classes_[np.argmax(scores, axis=1)]
+            return self._ordered_classes[(scores[:, 0] > 0).astype(int)]
+        return self._ordered_classes[np.argmax(scores, axis=1)]
 
     @classmethod
     def _get_test_params(cls, parameter_set="default"):
