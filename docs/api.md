@@ -16,6 +16,10 @@ Wrappers and misc estimators for use with `tsml-eval`.
     estimators.SklearnToTsmlClassifier
     estimators.SklearnToTsmlClusterer
     estimators.SklearnToTsmlRegressor
+    estimators.classification.convolution_based.FROCKSClassifier
+    estimators.classification.convolution_based.DROCKSClassifier
+    estimators.classification.convolution_based.Fed2RCClassifier
+    estimators.classification.convolution_based.MiniFed2RCClassifier
     estimators.classification.hybrid.FromFileHIVECOTE
     estimators.clustering.consensus.IterativeVotingClustering
     estimators.clustering.consensus.FromFileIterativeVotingClustering

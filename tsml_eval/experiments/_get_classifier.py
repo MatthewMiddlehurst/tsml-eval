@@ -15,6 +15,10 @@ convolution_based_classifiers = [
     ["multiarsenal", "multi-arsenal"],
     ["hydraclassifier", "hydra"],
     ["multirockethydraclassifier", "multirockethydra", "multirocket-hydra", "mrhydra"],
+    ["frocksclassifier", "frocks"],
+    ["drocksclassifier", "drocks"],
+    ["fed2rcclassifier", "fed2rc"],
+    ["minifed2rcclassifier", "minifed2rc"],
 ]
 deep_learning_classifiers = [
     ["timecnnclassifier", "timecnn", "cnnclassifier", "cnn"],
@@ -302,6 +306,30 @@ def _set_classifier_convolution_based(
         return MultiRocketHydraClassifier(
             random_state=random_state, n_jobs=n_jobs, **kwargs
         )
+    elif c == "frocksclassifier" or c == "frocks":
+        from tsml_eval.estimators.classification.convolution_based import (
+            FROCKSClassifier,
+        )
+
+        return FROCKSClassifier(random_state=random_state, n_jobs=n_jobs, **kwargs)
+    elif c == "drocksclassifier" or c == "drocks":
+        from tsml_eval.estimators.classification.convolution_based import (
+            DROCKSClassifier,
+        )
+
+        return DROCKSClassifier(random_state=random_state, n_jobs=n_jobs, **kwargs)
+    elif c == "fed2rcclassifier" or c == "fed2rc":
+        from tsml_eval.estimators.classification.convolution_based import (
+            Fed2RCClassifier,
+        )
+
+        return Fed2RCClassifier(random_state=random_state, n_jobs=n_jobs, **kwargs)
+    elif c == "minifed2rcclassifier" or c == "minifed2rc":
+        from tsml_eval.estimators.classification.convolution_based import (
+            MiniFed2RCClassifier,
+        )
+
+        return MiniFed2RCClassifier(random_state=random_state, n_jobs=n_jobs, **kwargs)
     else:
         raise ValueError(f"UNKNOWN CLASSIFIER: {c} in get_classifier_by_name")
 
