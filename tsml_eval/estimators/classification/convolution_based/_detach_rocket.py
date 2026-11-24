@@ -10,7 +10,6 @@ from aeon.transformations.collection.convolution_based import (
     MultiRocket,
     Rocket,
 )
-from aeon.utils.validation import check_n_jobs
 from sklearn.linear_model import RidgeClassifierCV
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -18,6 +17,7 @@ from sklearn.utils import check_random_state
 
 from tsml_eval.estimators.classification.convolution_based._selection_utils import (
     _apply_rocket_kernels,
+    _check_numba_jobs,
     _prune_rocket_kernels,
     _quiet_ridge_warnings,
     _retrain_optimal_ridge,
@@ -164,7 +164,7 @@ class DetachRocketClassifier(BaseClassifier):
 
     def _fit(self, X, y):
         self._validate_hyperparameters()
-        self._n_jobs = check_n_jobs(self.n_jobs)
+        self._n_jobs = _check_numba_jobs(self.n_jobs)
 
         if self.n_classes_ == 1:
             self.feature_mask_ = np.array([True])

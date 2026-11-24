@@ -6,11 +6,11 @@ __all__ = ["SRocketClassifier"]
 import numpy as np
 from aeon.classification import BaseClassifier
 from aeon.transformations.collection.convolution_based import MiniRocket, Rocket
-from aeon.utils.validation import check_n_jobs
 from sklearn.utils import check_random_state
 
 from tsml_eval.estimators.classification.convolution_based._selection_utils import (
     _apply_rocket_kernels,
+    _check_numba_jobs,
     _L2NormalisedRidgeClassifierCV,
     _prune_rocket_kernels,
 )
@@ -158,7 +158,7 @@ class SRocketClassifier(BaseClassifier):
                 "Choose from 'rocket', 'rocket-ppvmax', or 'minirocket'."
             )
 
-        self._n_jobs = check_n_jobs(self.n_jobs)
+        self._n_jobs = _check_numba_jobs(self.n_jobs)
         if self.n_classes_ == 1:
             self.kernel_mask_ = np.array([True])
             self.n_selected_kernels_ = 1

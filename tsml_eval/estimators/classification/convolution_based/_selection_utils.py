@@ -8,9 +8,15 @@ from contextlib import contextmanager
 import numpy as np
 from aeon.transformations.collection import Normalizer
 from aeon.transformations.collection.convolution_based._rocket import _apply_kernels
-from numba import get_num_threads, set_num_threads
+from aeon.utils.validation import check_n_jobs
+from numba import config, get_num_threads, set_num_threads
 from scipy.linalg import LinAlgWarning
 from sklearn.linear_model import RidgeClassifier, RidgeClassifierCV
+
+
+def _check_numba_jobs(n_jobs):
+    """Resolve ``n_jobs`` and cap at numba's configured threadpool limit."""
+    return min(check_n_jobs(n_jobs), config.NUMBA_NUM_THREADS)
 
 
 @contextmanager
@@ -77,7 +83,7 @@ def _apply_rocket_kernels(X, kernels, normalise, n_jobs):
     X = np.asarray(X, dtype=np.float64)
 
     prev_threads = get_num_threads()
-    set_num_threads(n_jobs)
+    set_num_threads(min(n_jobs, config.NUMBA_NUM_THREADS))
     try:
         return _apply_kernels(X, kernels)
     finally:

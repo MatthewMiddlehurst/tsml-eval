@@ -7,7 +7,6 @@ import numpy as np
 from aeon.classification import BaseClassifier
 from aeon.distances import distance as aeon_distance
 from aeon.transformations.collection.convolution_based import MiniRocket
-from aeon.utils.validation import check_n_jobs
 from scipy.special import expit
 from scipy.stats import median_abs_deviation
 from sklearn.linear_model import RidgeClassifierCV
@@ -15,6 +14,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.utils import check_random_state
 
 from tsml_eval.estimators.classification.convolution_based._selection_utils import (
+    _check_numba_jobs,
     _quiet_ridge_warnings,
 )
 
@@ -143,7 +143,7 @@ class ClassWiseMiniRocketClassifier(BaseClassifier):
                 "Choose from 'euclidean' or 'dtw'."
             )
 
-        self._n_jobs = check_n_jobs(self.n_jobs)
+        self._n_jobs = _check_numba_jobs(self.n_jobs)
         n_channels = X.shape[1]
 
         if self.n_classes_ == 1:

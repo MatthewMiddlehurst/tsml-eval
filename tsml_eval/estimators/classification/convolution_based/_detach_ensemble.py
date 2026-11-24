@@ -5,13 +5,13 @@ __all__ = ["DetachRocketEnsembleClassifier"]
 
 import numpy as np
 from aeon.classification import BaseClassifier
-from aeon.utils.validation import check_n_jobs
 
 from tsml_eval.estimators.classification.convolution_based._detach_rocket import (
     DetachRocketClassifier,
     _prepare_detach_split,
 )
 from tsml_eval.estimators.classification.convolution_based._selection_utils import (
+    _check_numba_jobs,
     _get_kernel_channel_indicator,
 )
 
@@ -173,7 +173,7 @@ class DetachRocketEnsembleClassifier(BaseClassifier):
                 "Choose from 'minirocket', 'multirocket', or 'rocket'."
             )
 
-        self._n_jobs = check_n_jobs(self.n_jobs)
+        self._n_jobs = _check_numba_jobs(self.n_jobs)
         n_channels = X.shape[1]
 
         if self.n_classes_ == 1:

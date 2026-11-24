@@ -217,3 +217,23 @@ def test_parameter_validation_errors():
         DetachRocketEnsembleClassifier(voting="invalid").fit(X, y)
     with pytest.raises(ValueError, match="channel_selection"):
         ClassWiseMiniRocketClassifier(channel_selection="invalid").fit(X, y)
+
+
+def test_numba_thread_cap_respected(monkeypatch):
+    """Test n_jobs=-1 does not exceed a capped NUMBA_NUM_THREADS limit."""
+    import numba
+
+    monkeypatch.setattr(numba.config, "NUMBA_NUM_THREADS", 1)
+    X, y = make_example_3d_numpy(
+        n_cases=16, n_channels=2, n_timepoints=15, random_state=0
+    )
+    for cls in [
+        SRocketClassifier,
+        POCKETClassifier,
+        DetachRocketClassifier,
+        DetachRocketEnsembleClassifier,
+        ClassWiseMiniRocketClassifier,
+    ]:
+        clf = cls(**cls._get_test_params(), n_jobs=-1, random_state=0).fit(X, y)
+        assert clf._n_jobs == 1
+        assert len(clf.predict(X)) == len(y)

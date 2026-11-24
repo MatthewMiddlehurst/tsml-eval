@@ -6,12 +6,12 @@ __all__ = ["POCKETClassifier"]
 import numpy as np
 from aeon.classification import BaseClassifier
 from aeon.transformations.collection.convolution_based import MiniRocket, Rocket
-from aeon.utils.validation import check_n_jobs
 from sklearn.model_selection import StratifiedKFold
 from sklearn.utils import check_random_state
 
 from tsml_eval.estimators.classification.convolution_based._selection_utils import (
     _apply_rocket_kernels,
+    _check_numba_jobs,
     _L2NormalisedRidgeClassifierCV,
     _prune_rocket_kernels,
 )
@@ -140,7 +140,7 @@ class POCKETClassifier(BaseClassifier):
                 "Choose from 'rocket', 'rocket-ppv', or 'minirocket'."
             )
 
-        self._n_jobs = check_n_jobs(self.n_jobs)
+        self._n_jobs = _check_numba_jobs(self.n_jobs)
         if self.n_classes_ == 1:
             self.k_ = 1.0 if self.k is None else float(np.atleast_1d(self.k)[0])
             self.kernel_mask_ = np.array([True])
