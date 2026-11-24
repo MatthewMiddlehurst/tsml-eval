@@ -55,8 +55,9 @@ class Fed2RCClassifier(BaseClassifier):
     n_rounds : int, default=100
         Maximum number of kernel selection rounds after the first.
     n_jobs : int, default=1
-        The number of jobs to run in parallel when applying kernels. ``-1`` means
-        using all processors.
+        The number of jobs to run in parallel when applying kernels, and the number
+        of clients to select the ridge lambda for in parallel. ``-1`` means using all
+        processors.
     random_state : int, RandomState instance or None, default=None
         Seed or random number generator used to split the data between clients.
 
@@ -158,6 +159,7 @@ class Fed2RCClassifier(BaseClassifier):
             [f.transform(self.seeds_) for f in features],
             [y[idx] for idx in clients],
             self.n_classes_,
+            n_jobs=self._n_jobs,
         )
 
         return self

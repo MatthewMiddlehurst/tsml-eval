@@ -7,6 +7,8 @@ only uses its own cases to fit its local models.
 
 __maintainer__ = ["MatthewMiddlehurst"]
 
+from concurrent.futures import ThreadPoolExecutor
+
 import numpy as np
 from aeon.transformations.collection import Normalizer
 from aeon.transformations.collection.convolution_based._rocket import (
@@ -14,6 +16,7 @@ from aeon.transformations.collection.convolution_based._rocket import (
     _generate_kernels,
 )
 from numba import get_num_threads, set_num_threads
+from threadpoolctl import threadpool_limits
 
 
 def _split_clients(X, y, n_clients, rng, repeat_initial):
@@ -140,21 +143,51 @@ class _SeededRocketFeatures:
         return np.column_stack([self._features[s] for s in seeds])
 
 
-def _normalised_ridge_weights(eigenvalues, eigenvectors, b, ridge_lambda):
-    """Solve ``(A + lambda I) W = b`` from an eigendecomposition of ``A``."""
-    W = eigenvectors @ ((eigenvectors.T @ b) / (eigenvalues + ridge_lambda)[:, None])
-    return W / (np.linalg.norm(W, axis=0, keepdims=True) + 1e-10)
+def _client_lambda(X, y, A, A_c, b, b_c):
+    """Select the ridge lambda for one client, as in the Fed2RC protocol.
+
+    Fits the ridge solution from the other clients' sums for each lambda in a grid,
+    and keeps the lambda with the best accuracy on the client's own data, with ties
+    going to the larger lambda.
+
+    One eigendecomposition gives the solution for every lambda. With
+    ``A - A_c = V diag(e) V^T``, the weights are ``V diag(1 / (e + lambda)) V^T b``,
+    and as ``V`` is orthogonal the norm of each class column is the norm of
+    ``diag(1 / (e + lambda)) V^T b``, so the client's scores only need ``X V``.
+
+    Returns
+    -------
+    weighted_lambda : float
+        The selected lambda times its accuracy.
+    accuracy : float
+        The accuracy of the selected lambda.
+    """
+    eigenvalues, eigenvectors = np.linalg.eigh(A - A_c)
+    projected_b = eigenvectors.T @ (b - b_c)
+    projected_X = X @ eigenvectors
+
+    best_accuracy = 0
+    best_lambda = 0
+    for ridge_lambda in np.logspace(-3, 0, 100):
+        coef = projected_b / (eigenvalues + ridge_lambda)[:, None]
+        coef = coef / (np.linalg.norm(coef, axis=0, keepdims=True) + 1e-10)
+        accuracy = np.mean(np.argmax(projected_X @ coef, axis=1) == y)
+        if accuracy > best_accuracy or (
+            accuracy == best_accuracy and ridge_lambda > best_lambda
+        ):
+            best_accuracy = accuracy
+            best_lambda = ridge_lambda
+
+    return best_lambda * best_accuracy, best_accuracy
 
 
-def _federated_ridge(client_features, client_y, n_classes):
+def _federated_ridge(client_features, client_y, n_classes, n_jobs=1):
     """Fit the Fed2RC closed-form ridge classifier.
 
     Each client shares ``X^T X`` and ``X^T Y`` for its features ``X`` and one-hot
-    labels ``Y``, and the server sums them. To select lambda, each client fits the
-    ridge solution from the other clients' sums for each lambda in a grid, and keeps
-    the lambda with the best accuracy on its own data, with ties going to the larger
-    lambda. The global lambda is the mean of the client lambdas weighted by their
-    accuracies.
+    labels ``Y``, and the server sums them. Each client then selects a lambda with
+    ``_client_lambda``, and the global lambda is the mean of the client lambdas
+    weighted by their accuracies.
 
     Parameters
     ----------
@@ -165,6 +198,8 @@ def _federated_ridge(client_features, client_y, n_classes):
         The integer class labels of each client.
     n_classes : int
         Number of classes.
+    n_jobs : int, default=1
+        The number of clients to select lambda for in parallel.
 
     Returns
     -------
@@ -182,28 +217,23 @@ def _federated_ridge(client_features, client_y, n_classes):
         A += A_c
         b += b_c
 
-    weighted_lambdas = []
-    accuracies = []
-    for X, y, A_c, b_c in zip(client_features, client_y, A_clients, b_clients):
-        # one eigendecomposition per client gives the solution for every lambda,
-        # rather than solving the system again for each one
-        eigenvalues, eigenvectors = np.linalg.eigh(A - A_c)
-        best_accuracy = 0
-        best_lambda = 0
-        for ridge_lambda in np.logspace(-3, 0, 100):
-            W = _normalised_ridge_weights(
-                eigenvalues, eigenvectors, b - b_c, ridge_lambda
+    # eigh results change with the number of BLAS threads, so each decomposition
+    # uses one thread, and clients run in parallel instead
+    with threadpool_limits(limits=1, user_api="blas"):
+        with ThreadPoolExecutor(max_workers=min(n_jobs, len(A_clients))) as pool:
+            selected = list(
+                pool.map(
+                    lambda args: _client_lambda(*args),
+                    [
+                        (X, y, A, A_c, b, b_c)
+                        for X, y, A_c, b_c in zip(
+                            client_features, client_y, A_clients, b_clients
+                        )
+                    ],
+                )
             )
-            accuracy = np.mean(np.argmax(X @ W, axis=1) == y)
-            if accuracy > best_accuracy or (
-                accuracy == best_accuracy and ridge_lambda > best_lambda
-            ):
-                best_accuracy = accuracy
-                best_lambda = ridge_lambda
 
-        weighted_lambdas.append(best_lambda * best_accuracy)
-        accuracies.append(best_accuracy)
-
+    weighted_lambdas, accuracies = zip(*selected)
     ridge_lambda = np.sum(weighted_lambdas) / np.sum(accuracies)
     W = np.linalg.solve(A + ridge_lambda * np.eye(A.shape[0]), b)
     W = W / (np.linalg.norm(W, axis=0, keepdims=True) + 1e-10)

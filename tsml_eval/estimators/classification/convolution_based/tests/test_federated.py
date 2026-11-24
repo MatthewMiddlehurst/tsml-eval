@@ -1,9 +1,12 @@
 """Tests for the federated ROCKET classifiers."""
 
+import warnings
+
 import numpy as np
 import pytest
 from aeon.testing.data_generation import make_example_3d_numpy
 from aeon.transformations.collection.convolution_based import Rocket
+from sklearn.neural_network import MLPClassifier
 
 from tsml_eval.estimators.classification.convolution_based import (
     DROCKSClassifier,
@@ -11,6 +14,7 @@ from tsml_eval.estimators.classification.convolution_based import (
     FROCKSClassifier,
     MiniFed2RCClassifier,
 )
+from tsml_eval.estimators.classification.convolution_based._drocks import _fit_mlp
 from tsml_eval.estimators.classification.convolution_based._federated_utils import (
     _normalise,
     _seeded_rocket_ppv,
@@ -92,3 +96,32 @@ def test_frocks_multiclass_raises():
 
     with pytest.raises(ValueError, match="binary"):
         FROCKSClassifier(n_kernels=20, random_state=0).fit(X, y)
+
+
+@pytest.mark.parametrize("n_cases, n_classes", [(15, 2), (14, 3)])
+def test_fit_mlp_matches_sklearn(n_cases, n_classes):
+    """Test the DROCKS local model fit is identical to the reference MLPClassifier."""
+    rng = np.random.RandomState(0)
+    X = rng.random_sample((n_cases, 30)).astype(np.float32)
+    y = np.arange(n_cases) % n_classes
+
+    sklearn_rng = np.random.RandomState(1)
+    ours_rng = np.random.RandomState(1)
+    for _ in range(2):
+        mlp = MLPClassifier(
+            hidden_layer_sizes=(),
+            activation="logistic",
+            alpha=0,
+            batch_size=2,
+            learning_rate_init=0.001,
+            max_iter=200,
+            random_state=sklearn_rng,
+        )
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            mlp.fit(X, y)
+        coef, intercept = _fit_mlp(X, y, ours_rng, 200)
+
+        np.testing.assert_array_equal(coef, mlp.coefs_[0])
+        np.testing.assert_array_equal(intercept, mlp.intercepts_[0])
+    assert sklearn_rng.randint(1000) == ours_rng.randint(1000)

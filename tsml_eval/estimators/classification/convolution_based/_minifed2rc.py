@@ -45,8 +45,9 @@ class MiniFed2RCClassifier(BaseClassifier):
     n_clients : int, default=4
         Number of simulated clients the training data is split between.
     n_jobs : int, default=1
-        The number of jobs to run in parallel for the MiniRocket transform. ``-1``
-        means using all processors.
+        The number of jobs to run in parallel for the MiniRocket transform, and the
+        number of clients to select the ridge lambda for in parallel. ``-1`` means
+        using all processors.
     random_state : int, RandomState instance or None, default=None
         Seed or random number generator used to split the data between clients and
         to fit MiniRocket. Every client fits MiniRocket with the same seed.
@@ -137,6 +138,7 @@ class MiniFed2RCClassifier(BaseClassifier):
             [self.transformer_.transform(X[idx]) for idx in clients],
             [y[idx] for idx in clients],
             self.n_classes_,
+            n_jobs=self._n_jobs,
         )
 
         return self

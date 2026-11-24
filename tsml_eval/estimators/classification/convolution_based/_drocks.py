@@ -6,8 +6,8 @@ __all__ = ["DROCKSClassifier"]
 import numpy as np
 from aeon.classification import BaseClassifier
 from aeon.utils.validation import check_n_jobs
-from scipy.special import expit
-from sklearn.neural_network import MLPClassifier
+from scipy.special import expit, xlogy
+from sklearn.preprocessing import LabelBinarizer
 from sklearn.utils import check_random_state
 
 from tsml_eval.estimators.classification.convolution_based._federated_utils import (
@@ -132,16 +132,6 @@ class DROCKSClassifier(BaseClassifier):
         clients = _split_clients(X, y, self.n_clients, rng, repeat_initial=True)
         features = [_SeededRocketFeatures(X[idx], self._n_jobs) for idx in clients]
 
-        mlp = MLPClassifier(
-            hidden_layer_sizes=(),
-            activation="logistic",
-            alpha=0,
-            batch_size=2,
-            learning_rate_init=0.001,
-            max_iter=self.max_iter,
-            random_state=rng,
-        )
-
         seeds = list(range(self.n_kernels))
         intercept = 0
         selected = []
@@ -153,10 +143,10 @@ class DROCKSClassifier(BaseClassifier):
             for c, idx in enumerate(clients):
                 used_seeds = seeds
 
-                mlp.fit(features[c].transform(used_seeds), y[idx])
-
-                w = mlp.coefs_[0]
-                intercept = intercept + mlp.intercepts_[0]
+                w, b = _fit_mlp(
+                    features[c].transform(used_seeds), y[idx], rng, self.max_iter
+                )
+                intercept = intercept + b
 
                 # rows of the largest absolute weights over all outputs
                 top = np.argsort(-np.abs(w), axis=None)[:n_top] // w.shape[1]
@@ -192,7 +182,7 @@ class DROCKSClassifier(BaseClassifier):
             previous_selected = set(selected_set)
 
         self.seeds_ = np.array(used_seeds)
-        self.coef_ = mlp.coefs_[0]
+        self.coef_ = w
         self.intercept_ = (intercept / self.n_clients)[0]
         self.n_rounds_ = i + 1
 
@@ -223,3 +213,136 @@ class DROCKSClassifier(BaseClassifier):
             Parameters to create testing instances of the class.
         """
         return {"n_kernels": 20, "n_rounds": 3, "max_iter": 20}
+
+
+def _fit_mlp(X, y, rng, max_iter):
+    """Fit the reference code's local model, an MLP with no hidden layer.
+
+    This repeats the operations of scikit-learn's ``MLPClassifier.fit`` for the
+    reference settings (``hidden_layer_sizes=()``, ``activation="logistic"``,
+    ``alpha=0``, Adam with ``learning_rate_init=0.001`` and ``batch_size=2``, other
+    parameters at their defaults) in the same order and data types, but without its
+    per batch input checks and dispatch, which take most of the time for batches of
+    two cases. The fitted weights and the draws from ``rng`` are the same.
+
+    Parameters
+    ----------
+    X : np.ndarray
+        Features of shape ``(n_cases, n_features)``.
+    y : np.ndarray
+        Class labels.
+    rng : np.random.RandomState
+        Random number generator for the initial weights and the batch order.
+    max_iter : int
+        Maximum number of epochs.
+
+    Returns
+    -------
+    coef : np.ndarray
+        The weights, of shape ``(n_features, n_outputs)``.
+    intercept : np.ndarray
+        The intercepts, of shape ``(n_outputs,)``.
+    """
+    binarizer = LabelBinarizer().fit(y)
+    multiclass = binarizer.y_type_ == "multiclass"
+    Y = binarizer.transform(y).astype(bool)
+    n_samples, n_features = X.shape
+    n_outputs = Y.shape[1]
+
+    init_bound = np.sqrt(2.0 / (n_features + n_outputs))
+    coef = rng.uniform(-init_bound, init_bound, (n_features, n_outputs))
+    intercept = rng.uniform(-init_bound, init_bound, n_outputs)
+    params = [coef.astype(X.dtype, copy=False), intercept.astype(X.dtype, copy=False)]
+
+    # the reference learning rate and alpha, and MLPClassifier's defaults otherwise
+    learning_rate_init = 0.001
+    alpha = 0
+    beta_1 = 0.9
+    beta_2 = 0.999
+    epsilon = 1e-8
+    tol = 1e-4
+    ms = [np.zeros_like(param) for param in params]
+    vs = [np.zeros_like(param) for param in params]
+    t = 0
+
+    eps = np.finfo(X.dtype).eps
+    batch_size = np.clip(2, 1, n_samples)
+    starts = list(range(0, n_samples - n_samples % batch_size, batch_size))
+    batches = [slice(start, start + batch_size) for start in starts]
+    if n_samples % batch_size:
+        batches.append(slice(n_samples - n_samples % batch_size, n_samples))
+
+    sample_idx = np.arange(n_samples, dtype=int)
+    best_loss = np.inf
+    no_improvement_count = 0
+    for _ in range(max_iter):
+        indices = np.arange(n_samples)
+        rng.shuffle(indices)
+        sample_idx = sample_idx[indices]
+
+        accumulated_loss = 0.0
+        for batch_slice in batches:
+            batch_idx = sample_idx[batch_slice]
+            X_batch = X[batch_idx]
+            y_batch = Y[batch_idx]
+            sw_sum = X_batch.shape[0]
+
+            # forward pass with a logistic or softmax output
+            output = X_batch @ params[0]
+            output += params[1]
+            if multiclass:
+                tmp = output - output.max(axis=1)[:, np.newaxis]
+                np.exp(tmp, out=output)
+                output /= output.sum(axis=1)[:, np.newaxis]
+                y_prob = np.clip(output, eps, 1 - eps)
+                loss = -xlogy(y_batch, y_prob).mean(axis=0).sum()
+            else:
+                expit(output, out=output)
+                y_prob = np.clip(output, eps, 1 - eps)
+                loss = (
+                    -(xlogy(y_batch, y_prob) + xlogy(1 - y_batch, 1 - y_prob))
+                    .mean(axis=0)
+                    .sum()
+                )
+            values = 0
+            s = params[0].ravel()
+            values += np.dot(s, s)
+            loss += (0.5 * alpha) * values / sw_sum
+
+            # gradients
+            deltas = output - y_batch
+            coef_grad = X_batch.T @ deltas
+            coef_grad += alpha * params[0]
+            coef_grad /= sw_sum
+            intercept_grad = np.sum(deltas, axis=0) / sw_sum
+            accumulated_loss += loss * (batch_slice.stop - batch_slice.start)
+
+            # Adam update, with the moments updated in place
+            t += 1
+            learning_rate = (
+                learning_rate_init * np.sqrt(1 - beta_2**t) / (1 - beta_1**t)
+            )
+            for param, m, v, grad in zip(params, ms, vs, (coef_grad, intercept_grad)):
+                m *= beta_1
+                m += (1 - beta_1) * grad
+                v *= beta_2
+                v += (1 - beta_2) * (grad**2)
+                param += -learning_rate * m / (np.sqrt(v) + epsilon)
+
+        # stop when the training loss has not improved by tol for 10 epochs
+        epoch_loss = accumulated_loss / n_samples
+        if epoch_loss > best_loss - tol:
+            no_improvement_count += 1
+        else:
+            no_improvement_count = 0
+        if epoch_loss < best_loss:
+            best_loss = epoch_loss
+        if no_improvement_count > 10:
+            break
+
+    if not all(np.isfinite(param).all() for param in params):
+        raise ValueError(
+            "Solver produced non-finite parameter weights. The input data may"
+            " contain large values and need to be preprocessed."
+        )
+    return params[0], params[1]
