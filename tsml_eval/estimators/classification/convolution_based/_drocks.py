@@ -123,6 +123,8 @@ class DROCKSClassifier(BaseClassifier):
     def _fit(self, X, y):
         if self.n_kernels < self.n_clients:
             raise ValueError("n_kernels must be at least n_clients.")
+        if self.n_rounds < 1:
+            raise ValueError("n_rounds must be at least 1.")
 
         self._n_jobs = check_n_jobs(self.n_jobs)
         rng = check_random_state(self.random_state)

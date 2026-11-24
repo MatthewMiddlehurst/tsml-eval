@@ -29,10 +29,10 @@ class Fed2RCClassifier(BaseClassifier):
     In each round every client fits a ``RidgeClassifierCV`` on the PPV features of its
     kernels, and sends the ``n_kernels // n_clients`` kernels with the largest
     absolute weights to the server. For multiclass problems these are the weights of
-    the first class. Clients start with
-    ``n_kernels`` kernels of their own, and in later rounds all use the union of the
-    kernels selected in the previous round. Selection stops when a round selects the
-    same kernels as the one before, or after ``n_rounds + 1`` rounds.
+    the first class. Clients start with ``n_kernels`` kernels of their own, and in
+    later rounds all use the union of the kernels selected in the previous round.
+    Selection stops when a round selects the same kernels as the one before, or after
+    ``n_rounds + 1`` rounds.
 
     The final ridge classifier is fitted in closed form from the sums of each
     client's ``X^T X`` and ``X^T Y``, with ``Y`` the one-hot class labels and no

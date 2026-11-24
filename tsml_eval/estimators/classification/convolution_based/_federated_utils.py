@@ -51,6 +51,12 @@ def _split_clients(X, y, n_clients, rng, repeat_initial):
     clients : list of np.ndarray
         The case indices of each client.
     """
+    if len(y) < n_clients:
+        raise ValueError(
+            f"There must be at least n_clients={n_clients} training cases, found "
+            f"{len(y)}."
+        )
+
     if not repeat_initial and np.bincount(y).max() < n_clients:
         shuffled = rng.permutation(len(y))
         n = len(y) // n_clients

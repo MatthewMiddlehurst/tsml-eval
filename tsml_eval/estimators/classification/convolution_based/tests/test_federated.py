@@ -98,6 +98,22 @@ def test_frocks_multiclass_raises():
         FROCKSClassifier(n_kernels=20, random_state=0).fit(X, y)
 
 
+def test_split_clients_too_few_cases():
+    """Test the split raises a clear error with fewer cases than clients."""
+    X = np.random.RandomState(0).random_sample((3, 1, 10))
+    y = np.array([0, 1, 2])
+    with pytest.raises(ValueError, match="at least n_clients"):
+        _split_clients(X, y, 4, np.random.RandomState(0), repeat_initial=False)
+
+
+@pytest.mark.parametrize("classifier", [FROCKSClassifier, DROCKSClassifier])
+def test_no_rounds_raises(classifier):
+    """Test FROCKS and DROCKS reject n_rounds below one."""
+    X, y = make_example_3d_numpy(n_cases=20, random_state=0)
+    with pytest.raises(ValueError, match="n_rounds"):
+        classifier(n_kernels=20, n_rounds=0).fit(X, y)
+
+
 @pytest.mark.parametrize("n_cases, n_classes", [(15, 2), (14, 3)])
 def test_fit_mlp_matches_sklearn(n_cases, n_classes):
     """Test the DROCKS local model fit is identical to the reference MLPClassifier."""
