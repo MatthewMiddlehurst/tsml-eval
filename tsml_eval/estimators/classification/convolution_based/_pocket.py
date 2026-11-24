@@ -16,7 +16,7 @@ from tsml_eval.estimators.classification.convolution_based._selection_utils impo
     _prune_rocket_kernels,
 )
 
-_DEFAULT_K_GRID = (0.01, 0.1, 1.0, 10.0, 100.0, 1000.0)
+_DEFAULT_K_GRID = (10.0, 1.0, 0.1, 0.01, 100.0, 1000.0)
 
 
 class POCKETClassifier(BaseClassifier):
@@ -46,7 +46,7 @@ class POCKETClassifier(BaseClassifier):
         Number of Stage 1 ADMM iterations.
     k : float, sequence of float or None, default=None
         Penalty ratio ``rho_3 / rho_2`` in Stage 1. If None, ``k`` is selected
-        from ``[0.01, 0.1, 1, 10, 100, 1000]`` using 5-fold stratified
+        from ``[10, 1, 0.1, 0.01, 100, 1000]`` using 5-fold stratified
         cross-validation on the training data (falling back to fewer folds or
         ``k=1.0`` when classes have too few instances, as in [1]_). If a single
         float is given, it is used directly without cross-validation.

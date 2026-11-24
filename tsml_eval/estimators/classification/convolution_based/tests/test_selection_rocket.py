@@ -110,7 +110,7 @@ def test_detach_rocket_variants(rocket_transform, set_percentage):
 
 
 def test_detach_rocket_small_imbalanced_fallback():
-    """Test DetachRocketClassifier falls back to 10% when stratified split fails."""
+    """Test DetachRocketClassifier falls back to 10% or 5% when split fails."""
     rng = np.random.RandomState(0)
     X = rng.normal(size=(7, 1, 20))
     # Class 2 has only 1 instance so stratified validation split is impossible
@@ -119,6 +119,12 @@ def test_detach_rocket_small_imbalanced_fallback():
     clf = DetachRocketClassifier(n_kernels=50, n_steps=60, random_state=0).fit(X, y)
     assert clf.retained_ratio_ == pytest.approx(0.10, abs=0.02)
     assert set(clf.predict(X)) <= set(y)
+
+    clf_mr = DetachRocketClassifier(
+        n_kernels=84, n_steps=70, rocket_transform="multirocket", random_state=0
+    ).fit(X, y)
+    assert clf_mr.retained_ratio_ == pytest.approx(0.05, abs=0.015)
+    assert set(clf_mr.predict(X)) <= set(y)
 
 
 @pytest.mark.parametrize("rocket_transform", ["minirocket", "multirocket", "rocket"])

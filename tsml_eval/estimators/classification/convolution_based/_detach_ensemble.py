@@ -192,8 +192,9 @@ class DetachRocketEnsembleClassifier(BaseClassifier):
             seed_rng = np.random.default_rng(self.random_state)
             split_seed = int(seed_rng.integers(0, np.iinfo(np.int32).max))
 
-        member_seeds = seed_rng.integers(
-            0, np.iinfo(np.int32).max, size=self.n_estimators
+        member_seeds = (
+            seed_rng.integers(0, 2**32 - 1, size=self.n_estimators, dtype=np.int64)
+            & np.iinfo(np.int32).max
         )
         member_kernels = (
             max(84, self.n_kernels // 8)
@@ -201,9 +202,16 @@ class DetachRocketEnsembleClassifier(BaseClassifier):
             else self.n_kernels
         )
 
+        fallback_pct = 5.0 if transform_type == "multirocket" else 10.0
         y_ind = np.array([self._class_dictionary[label] for label in y], dtype=int)
         X_tr, X_val, y_tr, y_val, eff_pct = _prepare_detach_split(
-            X, y_ind, self.n_classes_, self.set_percentage, self.val_ratio, split_seed
+            X,
+            y_ind,
+            self.n_classes_,
+            self.set_percentage,
+            self.val_ratio,
+            split_seed,
+            fallback_pct=fallback_pct,
         )
 
         self.estimators_ = []

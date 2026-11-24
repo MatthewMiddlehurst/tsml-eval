@@ -185,9 +185,16 @@ class DetachRocketClassifier(BaseClassifier):
             trf_seed = int(rng.randint(np.iinfo(np.int32).max))
             split_seed = int(rng.randint(np.iinfo(np.int32).max))
 
+        fallback_pct = 5.0 if self.rocket_transform.lower() == "multirocket" else 10.0
         y_ind = np.array([self._class_dictionary[label] for label in y], dtype=int)
         X_tr, X_val, y_tr, y_val, eff_pct = _prepare_detach_split(
-            X, y_ind, self.n_classes_, self.set_percentage, self.val_ratio, split_seed
+            X,
+            y_ind,
+            self.n_classes_,
+            self.set_percentage,
+            self.val_ratio,
+            split_seed,
+            fallback_pct=fallback_pct,
         )
         self._fit_from_split(X_tr, y_tr, X_val, y_val, trf_seed, eff_pct)
         return self
@@ -375,14 +382,16 @@ class DetachRocketClassifier(BaseClassifier):
         return {"n_kernels": 20, "n_steps": 10}
 
 
-def _prepare_detach_split(X, y_ind, n_classes, set_percentage, val_ratio, split_seed):
-    """Build stratified train/validation split, falling back to 10% if impossible."""
+def _prepare_detach_split(
+    X, y_ind, n_classes, set_percentage, val_ratio, split_seed, fallback_pct=10.0
+):
+    """Build stratified train/validation split, falling back if impossible."""
     if set_percentage is not None:
         return X, None, y_ind, None, float(set_percentage)
 
     counts = np.bincount(y_ind, minlength=n_classes)
     if counts.min() < 2:
-        return X, None, y_ind, None, 10.0
+        return X, None, y_ind, None, fallback_pct
 
     try:
         X_tr, X_val, y_tr, y_val = train_test_split(
@@ -393,9 +402,9 @@ def _prepare_detach_split(X, y_ind, n_classes, set_percentage, val_ratio, split_
             stratify=y_ind,
         )
     except ValueError:
-        return X, None, y_ind, None, 10.0
+        return X, None, y_ind, None, fallback_pct
 
     if len(np.unique(y_tr)) < n_classes or len(np.unique(y_val)) < n_classes:
-        return X, None, y_ind, None, 10.0
+        return X, None, y_ind, None, fallback_pct
 
     return X_tr, X_val, y_tr, y_val, None
