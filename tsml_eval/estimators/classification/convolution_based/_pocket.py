@@ -129,6 +129,10 @@ class POCKETClassifier(BaseClassifier):
         super().__init__()
 
     def _fit(self, X, y):
+        if self.n_kernels < 1:
+            raise ValueError(f"n_kernels must be at least 1, got {self.n_kernels}.")
+        if self.n_iter < 1:
+            raise ValueError(f"n_iter must be at least 1, got {self.n_iter}.")
         if not 0 < self.remain_ratio <= 1:
             raise ValueError(
                 f"remain_ratio must be in (0, 1], got {self.remain_ratio}."

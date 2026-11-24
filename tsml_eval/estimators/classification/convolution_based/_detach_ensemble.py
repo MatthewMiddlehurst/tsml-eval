@@ -166,12 +166,8 @@ class DetachRocketEnsembleClassifier(BaseClassifier):
                 f"Unknown channel_aggregation={self.channel_aggregation!r}. "
                 "Choose from 'median' or 'mean'."
             )
+        DetachRocketClassifier._validate_hyperparameters(self)
         transform_type = self.rocket_transform.lower()
-        if transform_type not in ("minirocket", "multirocket", "rocket"):
-            raise ValueError(
-                f"Unknown rocket_transform={self.rocket_transform!r}. "
-                "Choose from 'minirocket', 'multirocket', or 'rocket'."
-            )
 
         self._n_jobs = _check_numba_jobs(self.n_jobs)
         n_channels = X.shape[1]

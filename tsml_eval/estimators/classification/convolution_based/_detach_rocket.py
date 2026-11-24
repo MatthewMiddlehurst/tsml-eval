@@ -200,6 +200,8 @@ class DetachRocketClassifier(BaseClassifier):
         return self
 
     def _validate_hyperparameters(self):
+        if self.n_kernels < 1:
+            raise ValueError(f"n_kernels must be at least 1, got {self.n_kernels}.")
         if self.set_percentage is not None and not 0 < self.set_percentage <= 100:
             raise ValueError(
                 f"set_percentage must be in (0, 100], got {self.set_percentage}."
@@ -208,8 +210,17 @@ class DetachRocketClassifier(BaseClassifier):
             raise ValueError(f"drop_ratio must be in (0, 1), got {self.drop_ratio}.")
         if self.n_steps < 1:
             raise ValueError(f"n_steps must be at least 1, got {self.n_steps}.")
+        if self.smoothing_points < 1:
+            raise ValueError(
+                f"smoothing_points must be at least 1, got {self.smoothing_points}."
+            )
         if not 0 < self.val_ratio < 1:
             raise ValueError(f"val_ratio must be in (0, 1), got {self.val_ratio}.")
+        if self.multiclass_type not in ("max", "norm", "avg"):
+            raise ValueError(
+                f"Unknown multiclass_type={self.multiclass_type!r}. "
+                "Choose from 'max', 'norm', or 'avg'."
+            )
         if self.rocket_transform.lower() not in (
             "rocket",
             "minirocket",

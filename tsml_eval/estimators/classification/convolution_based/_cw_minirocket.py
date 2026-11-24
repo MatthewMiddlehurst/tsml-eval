@@ -118,6 +118,13 @@ class ClassWiseMiniRocketClassifier(BaseClassifier):
         super().__init__()
 
     def _fit(self, X, y):
+        if self.n_kernels < 1:
+            raise ValueError(f"n_kernels must be at least 1, got {self.n_kernels}.")
+        if self.max_dilations_per_kernel < 1:
+            raise ValueError(
+                "max_dilations_per_kernel must be at least 1, "
+                f"got {self.max_dilations_per_kernel}."
+            )
         method = (
             None if self.channel_selection is None else self.channel_selection.lower()
         )

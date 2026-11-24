@@ -136,6 +136,10 @@ class SRocketClassifier(BaseClassifier):
         super().__init__()
 
     def _fit(self, X, y):
+        if self.n_kernels < 1:
+            raise ValueError(f"n_kernels must be at least 1, got {self.n_kernels}.")
+        if self.n_epochs < 1:
+            raise ValueError(f"n_epochs must be at least 1, got {self.n_epochs}.")
         if self.pop_size < 3:
             raise ValueError(f"pop_size must be at least 3, got {self.pop_size}.")
         if not 0.0 <= self.mutation_factor <= 1.0:

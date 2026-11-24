@@ -207,14 +207,38 @@ def test_parameter_validation_errors():
     """Test invalid hyperparameters raise clear ValueErrors."""
     X, y = make_example_3d_numpy(n_cases=10, n_channels=2, random_state=0)
 
+    with pytest.raises(ValueError, match="n_kernels"):
+        SRocketClassifier(n_kernels=0).fit(X, y)
+    with pytest.raises(ValueError, match="n_epochs"):
+        SRocketClassifier(n_epochs=0).fit(X, y)
     with pytest.raises(ValueError, match="pop_size"):
         SRocketClassifier(pop_size=2).fit(X, y)
+
+    with pytest.raises(ValueError, match="n_kernels"):
+        POCKETClassifier(n_kernels=0).fit(X, y)
+    with pytest.raises(ValueError, match="n_iter"):
+        POCKETClassifier(n_iter=0).fit(X, y)
     with pytest.raises(ValueError, match="remain_ratio"):
         POCKETClassifier(remain_ratio=0.0).fit(X, y)
+
+    with pytest.raises(ValueError, match="n_kernels"):
+        DetachRocketClassifier(n_kernels=0).fit(X, y)
     with pytest.raises(ValueError, match="set_percentage"):
         DetachRocketClassifier(set_percentage=120).fit(X, y)
+    with pytest.raises(ValueError, match="smoothing_points"):
+        DetachRocketClassifier(smoothing_points=0).fit(X, y)
+    with pytest.raises(ValueError, match="multiclass_type"):
+        DetachRocketClassifier(multiclass_type="invalid").fit(X, y)
+
     with pytest.raises(ValueError, match="voting"):
         DetachRocketEnsembleClassifier(voting="invalid").fit(X, y)
+    with pytest.raises(ValueError, match="n_kernels"):
+        DetachRocketEnsembleClassifier(n_kernels=0).fit(X, y)
+
+    with pytest.raises(ValueError, match="n_kernels"):
+        ClassWiseMiniRocketClassifier(n_kernels=0).fit(X, y)
+    with pytest.raises(ValueError, match="max_dilations_per_kernel"):
+        ClassWiseMiniRocketClassifier(max_dilations_per_kernel=0).fit(X, y)
     with pytest.raises(ValueError, match="channel_selection"):
         ClassWiseMiniRocketClassifier(channel_selection="invalid").fit(X, y)
 
