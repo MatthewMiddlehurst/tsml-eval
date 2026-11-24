@@ -5,7 +5,6 @@ __all__ = ["HDCMultiRocketClassifier"]
 
 import numpy as np
 from aeon.transformations.collection.convolution_based import MiniRocket
-from aeon.transformations.collection.convolution_based._minirocket import _static_fit
 from numba import njit, prange
 
 from tsml_eval.estimators.classification.convolution_based._hdc_utils import (
@@ -17,8 +16,9 @@ class HDCMultiRocketClassifier(_BaseHDCRocketClassifier):
     """MultiRocket with explicit time encoding using hyperdimensional computing.
 
     HDC-MultiRocket [1]_ adds the time of each convolution output to the MultiRocket
-    features. As in MultiRocket, MiniRocket kernels are applied to the series and to
-    its first order difference. Each time point is encoded as a hyperdimensional
+    features. The kernels, dilations and biases for the series and its first order
+    difference are fitted with two aeon ``MiniRocket`` transforms, as in MultiRocket.
+    Each time point is encoded as a hyperdimensional
     vector using sinusoidal fractional power encoding, with the similarity of the
     vectors of two time points decreasing with their distance at a rate set by
     ``beta``.
@@ -74,11 +74,12 @@ class HDCMultiRocketClassifier(_BaseHDCRocketClassifier):
 
     Notes
     -----
-    The reference implementation allocates a fourth feature for each kernel but
-    leaves it at zero, these constant features are not included. For multivariate
-    data, the reference applies the kernels to the first order difference using
-    only the channels of the first kernel. Here each kernel uses the channels it was
-    fitted with, as in MultiRocket.
+    With the default parameters there are 37,296 features, as in the paper. The
+    reference implementation allocates a fourth feature for each kernel but leaves it
+    at zero, these constant features are not included. As in the reference, the
+    kernels on the first order difference use the channels of the kernels on the
+    series. The reference draws the channels of multivariate kernels from the global
+    random state without seeding it, here they are drawn using ``random_state``.
 
     References
     ----------
@@ -124,7 +125,11 @@ class HDCMultiRocketClassifier(_BaseHDCRocketClassifier):
 
     def _fit_kernels(self, X):
         self._parameters, self._parameters1 = _fit_multirocket(
-            X, self.n_kernels, self.max_dilations_per_kernel, self._seed
+            X,
+            self.n_kernels,
+            self.max_dilations_per_kernel,
+            self._seed,
+            self._n_jobs,
         )
 
     def _n_hdc_columns(self):
@@ -151,23 +156,36 @@ class HDCMultiRocketClassifier(_BaseHDCRocketClassifier):
         return {"n_kernels": 84, "hdc_dim": 200, "beta": 1}
 
 
-def _fit_multirocket(X, n_kernels, max_dilations_per_kernel, seed):
-    """Fit MiniRocket parameters to a series and its first order difference."""
-    n_kernels = max(n_kernels, 84)
-    parameters = _static_fit(X, n_kernels, max_dilations_per_kernel, seed)
-    parameters1 = _static_fit(
-        np.diff(X, 1).astype(np.float32), n_kernels, max_dilations_per_kernel, seed
+def _fit_multirocket(X, n_kernels, max_dilations_per_kernel, seed, n_jobs):
+    """Fit the MultiRocket parameters for a series and its first difference.
+
+    As in MultiRocket, the parameters for each input are fitted with a MiniRocket
+    transform using the same seed. The difference is taken before casting to single
+    precision, as in the reference. The kernels on the difference use the channels
+    of the kernels on the series.
+    """
+    parameters, parameters1 = (
+        MiniRocket(
+            n_kernels=n_kernels,
+            max_dilations_per_kernel=max_dilations_per_kernel,
+            n_jobs=n_jobs,
+            random_state=seed,
+        )
+        .fit(x)
+        .parameters
+        for x in (X, np.diff(X, 1).astype(np.float32))
     )
-    return parameters, parameters1
+    return parameters, (parameters[0], parameters[1], *parameters1[2:])
 
 
 def _transform_multirocket(X, parameters, parameters1, poses):
     """Apply the HDC-MultiRocket transform to a series and its first difference."""
+    # as in the reference, the difference is taken before casting to single precision
     X1 = np.diff(X, 1).astype(np.float32)
     Xt = _hdc_multirocket_transform(
-        X, X1, parameters, parameters1, MiniRocket._indices, poses
+        X.astype(np.float32), X1, parameters, parameters1, MiniRocket._indices, poses
     )
-    return np.nan_to_num(Xt).astype(np.float64)
+    return np.nan_to_num(Xt)
 
 
 @njit(fastmath=True, parallel=True, cache=True)
@@ -266,7 +284,7 @@ def _hdc_multirocket_series(_X, n_timepoints, parameters, indices, poses, out, o
             for f in range(f_start, f_start + n_features_this_dilation):
                 bias = biases[f]
                 ppv = 0
-                ppv_hdc = 0.0
+                ppv_hdc = np.float32(0)
                 mean = 0.0
                 last_val = 0
                 max_stretch = 0.0

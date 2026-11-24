@@ -3,12 +3,10 @@
 import numpy as np
 import pytest
 from aeon.testing.data_generation import make_example_3d_numpy
-from aeon.transformations.collection.convolution_based import MiniRocket, MultiRocket
-from aeon.transformations.collection.convolution_based._minirocket import (
-    _static_transform_multi,
-)
-from aeon.transformations.collection.convolution_based._multirocket import (
-    _transform_uni,
+from aeon.transformations.collection.convolution_based import (
+    HydraTransformer,
+    MiniRocket,
+    MultiRocket,
 )
 from aeon.utils.validation._dependencies import _check_soft_dependencies
 
@@ -17,15 +15,6 @@ from tsml_eval.estimators.classification.convolution_based import (
     HDCMiniRocketClassifier,
     HDCMultiRocketClassifier,
     HDCMultiRocketHydraClassifier,
-)
-from tsml_eval.estimators.classification.convolution_based._hdc_hydra import (
-    _hdc_hydra_transform,
-)
-from tsml_eval.estimators.classification.convolution_based._hdc_minirocket import (
-    _hdc_minirocket_transform,
-)
-from tsml_eval.estimators.classification.convolution_based._hdc_multirocket import (
-    _transform_multirocket,
 )
 from tsml_eval.estimators.classification.convolution_based._hdc_utils import (
     HDC_BETAS,
@@ -56,23 +45,22 @@ def _ones_poses(n_columns, n_timepoints):
 
 
 @pytest.mark.parametrize("n_channels", [1, 3])
-def test_hdc_minirocket_transform_counts(n_channels):
+def test_hdc_minirocket_matches_minirocket(n_channels):
     """Test HDC-MiniRocket with constant encodings counts the MiniRocket PPV."""
     X, y = make_example_3d_numpy(
         n_cases=8, n_channels=n_channels, n_timepoints=40, random_state=0
     )
     clf = HDCMiniRocketClassifier(n_kernels=168, beta=0, random_state=0).fit(X, y)
     Xp = clf._preprocess(X.astype(np.float64))
-    parameters = clf._parameters
 
-    counts = _hdc_minirocket_transform(
-        Xp, parameters, MiniRocket._indices, _ones_poses(168, 40)
-    )
-    ppv = _static_transform_multi(Xp, parameters, MiniRocket._indices)
+    counts = clf._transform_hdc(Xp, _ones_poses(168, 40))
+    minirocket = MiniRocket(n_kernels=168, random_state=0).fit(Xp)
+    ppv = minirocket.transform(Xp)
 
     # alternate kernels only use the outputs without padding
     n_positions = []
-    for j, (dilation, n_features) in enumerate(zip(parameters[2], parameters[3])):
+    dilations, n_features_per_dilation = minirocket.parameters[2:4]
+    for j, (dilation, n_features) in enumerate(zip(dilations, n_features_per_dilation)):
         for k in range(84):
             padded = (j + k) % 2 == 1
             n_positions += [40 - 8 * dilation if padded else 40] * n_features
@@ -80,64 +68,91 @@ def test_hdc_minirocket_transform_counts(n_channels):
     np.testing.assert_allclose(counts, ppv * np.array(n_positions), atol=1e-4)
 
 
-def test_hdc_multirocket_transform_matches_multirocket():
+@pytest.mark.parametrize("n_channels", [1, 3])
+def test_hdc_multirocket_matches_multirocket(n_channels):
     """Test HDC-MultiRocket with constant encodings gives the MultiRocket features."""
-    X, y = make_example_3d_numpy(n_cases=8, n_timepoints=40, random_state=0)
+    X, y = make_example_3d_numpy(
+        n_cases=8, n_channels=n_channels, n_timepoints=40, random_state=0
+    )
     clf = HDCMultiRocketClassifier(
         n_kernels=168, hdc_dim=400, beta=0, random_state=0
     ).fit(X, y)
     Xp = clf._preprocess(X.astype(np.float64))
 
-    hdc = _transform_multirocket(
-        Xp, clf._parameters, clf._parameters1, _ones_poses(168, 40)
-    )
-    # the univariate MultiRocket parameters have no channel information
-    X2 = Xp[:, 0]
-    mr = _transform_uni(
-        X2,
-        np.diff(X2, 1),
-        clf._parameters[2:],
-        clf._parameters1[2:],
-        4,
-        MultiRocket._indices,
-        0,
-    )
+    hdc = clf._transform_hdc(Xp, _ones_poses(168, 40))
+    mr = MultiRocket(n_kernels=168, normalise=False, random_state=0).fit_transform(Xp)
 
-    # MultiRocket has PPV, LSPV, MPV and MIPV blocks for each input
+    # MultiRocket has PPV, LSPV, MPV and MIPV blocks for each input, HDC-MultiRocket
+    # drops MIPV
     nf = 168
     mr = np.hstack([mr[:, i * nf : (i + 1) * nf] for i in [0, 1, 2, 4, 5, 6]])
-    np.testing.assert_allclose(hdc, mr, rtol=1e-5, atol=1e-5)
+    if n_channels > 1:
+        # aeon MultiRocket draws new channels to fit the difference biases
+        hdc, mr = hdc[:, : 3 * nf], mr[:, : 3 * nf]
+    # aeon MultiRocket takes the difference after casting to single precision
+    np.testing.assert_allclose(hdc, mr, rtol=1e-4, atol=1e-4)
 
 
 @pytest.mark.skipif(
     not _check_soft_dependencies("torch", severity="none"),
     reason="skip test if required soft dependency not available",
 )
-def test_hdc_hydra_transform_matches_hydra():
-    """Test HDC-Hydra with constant encodings gives the multivariate Hydra features."""
-    import torch
-    from aeon.transformations.collection.convolution_based._hydra import (
-        _HydraInternal,
-    )
-
+@pytest.mark.parametrize("n_channels", [1, 3])
+def test_hdc_hydra_matches_hydra(n_channels):
+    """Test HDC-Hydra with constant encodings gives the Hydra features."""
     X, y = make_example_3d_numpy(
-        n_cases=8, n_channels=3, n_timepoints=40, random_state=0
+        n_cases=8, n_channels=n_channels, n_timepoints=40, random_state=0
     )
     clf = HDCHydraClassifier(n_groups=8, hdc_dim=500, beta=0, random_state=0).fit(X, y)
     Xp = clf._preprocess(X.astype(np.float64))
-    hydra = clf._hydra
 
-    hdc = _hdc_hydra_transform(Xp, hydra, _ones_poses(clf._n_hdc_columns(), 40))
+    hdc = clf._transform_hdc(Xp, _ones_poses(clf._n_hdc_columns(), 40))
+    hydra = HydraTransformer(n_groups=8, random_state=0).fit_transform(Xp)
 
-    aeon_hydra = _HydraInternal(40, 3, k=8, g=8)
-    aeon_hydra.W = torch.stack(hydra["weights"])
-    aeon_hydra.idx = hydra["channels"]
-    with torch.no_grad():
-        Z = aeon_hydra(torch.from_numpy(Xp)).numpy()
+    # each block of aeon Hydra has the maximum values then the minimum counts,
+    # HDC-Hydra has the counts first, and adds univariate series to themselves
+    n = 8 * 4
+    blocks = hydra.reshape(len(X), -1, 2, n)
+    scale = 2 if n_channels == 1 else 1
+    expected = np.stack((blocks[:, :, 1], scale * blocks[:, :, 0]), 2)
+    np.testing.assert_allclose(hdc, expected.reshape(len(X), -1), rtol=1e-3, atol=1e-3)
+    # the transform is stored in half precision, as in the reference
+    assert hdc.dtype == np.float16
 
-    # aeon gives the max then min counts for each block, HDC-Hydra min then max
-    Z = Z.reshape(len(Z), -1, 2, 32)[:, :, ::-1].reshape(len(Z), -1)
-    np.testing.assert_allclose(hdc, Z, rtol=1e-5, atol=1e-5)
+
+@pytest.mark.skipif(
+    not _check_soft_dependencies("torch", severity="none"),
+    reason="skip test if required soft dependency not available",
+)
+def test_hdc_multirocket_hydra_features():
+    """Test HDC-MultiRocket-Hydra concatenates the two transforms."""
+    X, y = make_example_3d_numpy(n_cases=8, n_timepoints=40, random_state=0)
+    params = {"beta": 1, "random_state": 0}
+    clf = HDCMultiRocketHydraClassifier(
+        n_kernels=168, hydra_n_groups=8, hdc_dim=500, **params
+    ).fit(X, y)
+    mr = HDCMultiRocketClassifier(n_kernels=168, hdc_dim=500, **params).fit(X, y)
+    hydra = HDCHydraClassifier(n_groups=8, hdc_dim=500, **params).fit(X, y)
+    Xp = clf._preprocess(X.astype(np.float64))
+
+    np.testing.assert_allclose(
+        clf._transform_hdc(Xp, clf._poses),
+        np.hstack(
+            (mr._transform_hdc(Xp, mr._poses), hydra._transform_hdc(Xp, hydra._poses))
+        ),
+    )
+    assert clf._n_multirocket_features == 6 * 168
+
+
+def test_default_feature_counts():
+    """Test the default number of features matches Table 3 of the paper."""
+    X, y = make_example_3d_numpy(n_cases=10, n_timepoints=100, random_state=0)
+
+    mini = HDCMiniRocketClassifier(beta=1, random_state=0).fit(X, y)
+    assert mini.classifier_.coef_.shape[-1] == 9996
+
+    multi = HDCMultiRocketClassifier(beta=1, random_state=0).fit(X, y)
+    assert multi.classifier_.coef_.shape[-1] == 37296
 
 
 @pytest.mark.parametrize(

@@ -84,7 +84,9 @@ class _SparseScaler(TransformerMixin, BaseEstimator):
     """The Hydra sparse scaler, applied to the columns from ``start`` onwards.
 
     Columns are transformed with a signed square root and standardised, with zero
-    values kept at zero. Columns before ``start`` are returned unchanged.
+    values kept at zero. Columns before ``start`` are returned unchanged. As in the
+    reference, the Hydra features are stored in half precision, and the square root
+    and mean are computed in half precision.
     """
 
     def __init__(self, start=0, exponent=4):
@@ -99,14 +101,15 @@ class _SparseScaler(TransformerMixin, BaseEstimator):
         return self
 
     def transform(self, X):
-        X = X.copy()
         Xs = self._sqrt(X[:, self.start :])
-        X[:, self.start :] = ((Xs - self.mu_) * (Xs != 0)) / self.sigma_
+        Xs = ((Xs - self.mu_) * (Xs != 0)) / self.sigma_
+        X = np.hstack((X[:, : self.start], Xs))
         X[~np.isfinite(X)] = 0
         return X
 
     @staticmethod
     def _sqrt(X):
+        X = X.astype(np.float16)
         return np.sqrt(np.abs(X)) * np.sign(X)
 
 
@@ -152,10 +155,13 @@ class _BaseHDCRocketClassifier(BaseClassifier):
             else self.random_state
         )
 
-        X = np.nan_to_num(X.astype(np.float64))
-        self._channel_mean = X.mean(axis=(0, 2), keepdims=True)
-        std = X.std(axis=(0, 2), keepdims=True)
-        self._channel_std = np.where(std == 0, 1, std)
+        X = self._remove_nans(X)
+        self._channel_mean = np.zeros(X.shape[1])
+        self._channel_std = np.ones(X.shape[1])
+        for i in range(X.shape[1]):
+            self._channel_mean[i] = np.nanmean(X[:, i])
+            std = np.nanstd(X[:, i])
+            self._channel_std[i] = 1 if std == 0 else std
         X = self._preprocess(X)
         self._n_timepoints = X.shape[2]
 
@@ -185,7 +191,7 @@ class _BaseHDCRocketClassifier(BaseClassifier):
         return self
 
     def _predict(self, X):
-        X = self._preprocess(np.nan_to_num(X.astype(np.float64)))
+        X = self._preprocess(self._remove_nans(X))
 
         prev_threads = get_num_threads()
         set_num_threads(self._n_jobs)
@@ -194,11 +200,22 @@ class _BaseHDCRocketClassifier(BaseClassifier):
 
         return self.classifier_.predict(Xt)
 
+    @staticmethod
+    def _remove_nans(X):
+        X = np.array(X, dtype=np.float64)
+        X[np.isnan(X)] = 0
+        return X
+
     def _preprocess(self, X):
-        X = (X - self._channel_mean) / self._channel_std
+        """Normalise each channel and pad, keeping double precision.
+
+        The transforms cast to single precision, after differencing where used.
+        """
+        for i in range(X.shape[1]):
+            X[:, i] = (X[:, i] - self._channel_mean[i]) / self._channel_std[i]
         if X.shape[2] < self._min_length:
             X = np.pad(X, ((0, 0), (0, 0), (0, self._min_length - X.shape[2])))
-        return X.astype(np.float32)
+        return X
 
     def _get_poses(self, beta):
         return _fpe_poses(

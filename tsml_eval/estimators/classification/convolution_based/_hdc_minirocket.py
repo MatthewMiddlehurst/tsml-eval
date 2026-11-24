@@ -5,7 +5,6 @@ __all__ = ["HDCMiniRocketClassifier"]
 
 import numpy as np
 from aeon.transformations.collection.convolution_based import MiniRocket
-from aeon.transformations.collection.convolution_based._minirocket import _static_fit
 from numba import njit, prange
 
 from tsml_eval.estimators.classification.convolution_based._hdc_utils import (
@@ -25,11 +24,12 @@ class HDCMiniRocketClassifier(_BaseHDCRocketClassifier):
     the time point vectors. With ``beta=0`` all time points share one encoding, and
     the features are the MiniRocket features up to a scaling of each feature.
 
-    MiniRocket's kernels, dilations and biases are fitted as in MiniRocket. Each
-    channel is z-normalised using the training data, and the features are scaled to
-    ``[-1, 1]`` and standardised before a ``RidgeClassifierCV`` is fitted. Unless
-    ``beta`` is set, it is selected from ``2 ** np.linspace(0, 3, 7) - 1`` using the
-    leave-one-out score of the ridge classifier on the training data.
+    The kernels, dilations and biases are fitted with the aeon ``MiniRocket``
+    transform. Each channel is z-normalised using the training data, and the
+    features are scaled to ``[-1, 1]`` and standardised before a
+    ``RidgeClassifierCV`` is fitted. Unless ``beta`` is set, it is selected from
+    ``2 ** np.linspace(0, 3, 7) - 1`` using the leave-one-out score of the ridge
+    classifier on the training data.
 
     This follows the "hdc_auto" variant of the reference implementation [3]_.
 
@@ -68,8 +68,8 @@ class HDCMiniRocketClassifier(_BaseHDCRocketClassifier):
 
     Notes
     -----
-    As in the reference implementation, the features sum the time encodings rather
-    than averaging them over the series.
+    As in the paper and reference implementation, the features sum the time
+    encodings rather than averaging them over the series.
 
     References
     ----------
@@ -111,8 +111,14 @@ class HDCMiniRocketClassifier(_BaseHDCRocketClassifier):
         super().__init__(beta=beta, n_jobs=n_jobs, random_state=random_state)
 
     def _fit_kernels(self, X):
-        self._parameters = _static_fit(
-            X, max(self.n_kernels, 84), self.max_dilations_per_kernel, self._seed
+        self._parameters = (
+            MiniRocket(
+                n_kernels=self.n_kernels,
+                max_dilations_per_kernel=self.max_dilations_per_kernel,
+                random_state=self._seed,
+            )
+            .fit(X)
+            .parameters
         )
 
     def _n_hdc_columns(self):
@@ -120,8 +126,8 @@ class HDCMiniRocketClassifier(_BaseHDCRocketClassifier):
 
     def _transform_hdc(self, X, poses):
         return _hdc_minirocket_transform(
-            X, self._parameters, MiniRocket._indices, poses
-        ).astype(np.float64)
+            X.astype(np.float32), self._parameters, MiniRocket._indices, poses
+        )
 
     @classmethod
     def _get_test_params(cls, parameter_set="default"):
@@ -210,7 +216,7 @@ def _hdc_minirocket_transform(X, parameters, indices, poses):
 
                 for f in range(f_start, f_start + n_features_this_dilation):
                     bias = biases[f]
-                    total = 0.0
+                    total = np.float32(0)
                     for t in range(lo, hi):
                         if C[t] > bias:
                             total += poses[f, t]

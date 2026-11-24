@@ -83,8 +83,9 @@ class HDCMultiRocketHydraClassifier(_BaseHDCRocketClassifier):
 
     Notes
     -----
-    The reference implementation seeds the Hydra kernels with 42 regardless of the
-    seed of the run, here ``random_state`` seeds both transforms. See
+    The kernels are fitted with the aeon ``MiniRocket`` and ``HydraTransformer``
+    transforms, both seeded with ``random_state``. The reference seeds its Hydra
+    kernels with 42 regardless of the seed of the run. See
     ``HDCMultiRocketClassifier`` and ``HDCHydraClassifier`` for other differences
     to the reference.
 
@@ -142,11 +143,14 @@ class HDCMultiRocketHydraClassifier(_BaseHDCRocketClassifier):
 
     def _fit_kernels(self, X):
         self._parameters, self._parameters1 = _fit_multirocket(
-            X, self.n_kernels, self.max_dilations_per_kernel, self._seed
+            X,
+            self.n_kernels,
+            self.max_dilations_per_kernel,
+            self._seed,
+            self._n_jobs,
         )
         self._hydra = _fit_hdc_hydra(
-            X.shape[2],
-            X.shape[1],
+            X,
             self.hydra_n_kernels,
             self.hydra_n_groups,
             self.max_num_channels,
