@@ -79,7 +79,9 @@ class HDCHydraClassifier(_BaseHDCRocketClassifier):
     themselves, the transform is stored in half precision, and every second time
     point is used for series longer than 10,000. The Hydra sparse scaler of the
     reference takes the signed square root of the features, as the time encoded
-    features can be negative.
+    features can be negative. The reference computes the mean and standard deviation
+    of the scaler in half precision, which overflows for larger training sets and
+    sets the affected features to zero, here they are computed in double precision.
 
     References
     ----------

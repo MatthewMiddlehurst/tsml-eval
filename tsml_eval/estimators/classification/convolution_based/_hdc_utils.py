@@ -85,8 +85,11 @@ class _SparseScaler(TransformerMixin, BaseEstimator):
 
     Columns are transformed with a signed square root and standardised, with zero
     values kept at zero. Columns before ``start`` are returned unchanged. As in the
-    reference, the Hydra features are stored in half precision, and the square root
-    and mean are computed in half precision.
+    reference, the Hydra features are stored in half precision and the square root is
+    computed in half precision. The reference also computes the mean and standard
+    deviation in half precision, where the standard deviation overflows for larger
+    training sets and the feature is set to zero. Here they are computed in double
+    precision.
     """
 
     def __init__(self, start=0, exponent=4):
@@ -96,8 +99,14 @@ class _SparseScaler(TransformerMixin, BaseEstimator):
     def fit(self, X, y=None):
         X = self._sqrt(X[:, self.start :])
         epsilon = (X == 0).mean(0) ** self.exponent + 1e-8
-        self.mu_ = X.mean(0)
-        self.sigma_ = X.std(0) + epsilon
+        self.mu_ = np.zeros(X.shape[1])
+        self.sigma_ = np.zeros(X.shape[1])
+        # blocks of columns limit the memory of the double precision copy
+        for i in range(0, X.shape[1], 1024):
+            Xi = X[:, i : i + 1024].astype(np.float64)
+            self.mu_[i : i + 1024] = Xi.mean(0)
+            self.sigma_[i : i + 1024] = Xi.std(0)
+        self.sigma_ += epsilon
         return self
 
     def transform(self, X):

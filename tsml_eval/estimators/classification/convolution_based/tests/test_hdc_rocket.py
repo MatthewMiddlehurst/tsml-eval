@@ -19,6 +19,7 @@ from tsml_eval.estimators.classification.convolution_based import (
 from tsml_eval.estimators.classification.convolution_based._hdc_utils import (
     HDC_BETAS,
     _fpe_poses,
+    _SparseScaler,
 )
 
 
@@ -118,6 +119,20 @@ def test_hdc_hydra_matches_hydra(n_channels):
     np.testing.assert_allclose(hdc, expected.reshape(len(X), -1), rtol=1e-3, atol=1e-3)
     # the transform is stored in half precision, as in the reference
     assert hdc.dtype == np.float16
+
+
+def test_sparse_scaler_large_variance():
+    """Test the sparse scaler statistics do not overflow in half precision."""
+    # the sum of squared deviations of the square roots is about 2e5, above the
+    # largest half precision value
+    X = np.tile(np.array([[1.0, 4.0], [40000.0, 4.0]], dtype=np.float16), (10, 1))
+
+    scaler = _SparseScaler().fit(X)
+    Xt = scaler.transform(X)
+
+    np.testing.assert_allclose(scaler.mu_, [100.5, 2], rtol=1e-3)
+    np.testing.assert_allclose(scaler.sigma_, [99.5, 1e-8], rtol=1e-3)
+    np.testing.assert_allclose(Xt[:, 0], np.tile([-1, 1], 10), rtol=1e-3)
 
 
 @pytest.mark.skipif(
