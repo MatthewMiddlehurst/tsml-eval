@@ -19,6 +19,22 @@ convolution_based_classifiers = [
     ["drocksclassifier", "drocks"],
     ["fed2rcclassifier", "fed2rc"],
     ["minifed2rcclassifier", "minifed2rc"],
+    ["srocketclassifier", "srocket", "s-rocket"],
+    ["pocketclassifier", "pocket"],
+    ["detachrocketclassifier", "detachrocket", "detach-rocket"],
+    [
+        "detachrocketensembleclassifier",
+        "detachrocketensemble",
+        "detach-rocket-ensemble",
+        "detachensemble",
+        "detach-ensemble",
+    ],
+    [
+        "classwiseminirocketclassifier",
+        "classwiseminirocket",
+        "class-wise-minirocket",
+        "cw-minirocket",
+    ],
 ]
 deep_learning_classifiers = [
     ["timecnnclassifier", "timecnn", "cnnclassifier", "cnn"],
@@ -330,6 +346,53 @@ def _set_classifier_convolution_based(
         )
 
         return MiniFed2RCClassifier(random_state=random_state, n_jobs=n_jobs, **kwargs)
+    elif c == "srocketclassifier" or c == "srocket" or c == "s-rocket":
+        from tsml_eval.estimators.classification.convolution_based import (
+            SRocketClassifier,
+        )
+
+        return SRocketClassifier(random_state=random_state, n_jobs=n_jobs, **kwargs)
+    elif c == "pocketclassifier" or c == "pocket":
+        from tsml_eval.estimators.classification.convolution_based import (
+            POCKETClassifier,
+        )
+
+        return POCKETClassifier(random_state=random_state, n_jobs=n_jobs, **kwargs)
+    elif c == "detachrocketclassifier" or c == "detachrocket" or c == "detach-rocket":
+        from tsml_eval.estimators.classification.convolution_based import (
+            DetachRocketClassifier,
+        )
+
+        return DetachRocketClassifier(
+            random_state=random_state, n_jobs=n_jobs, **kwargs
+        )
+    elif (
+        c == "detachrocketensembleclassifier"
+        or c == "detachrocketensemble"
+        or c == "detach-rocket-ensemble"
+        or c == "detachensemble"
+        or c == "detach-ensemble"
+    ):
+        from tsml_eval.estimators.classification.convolution_based import (
+            DetachRocketEnsembleClassifier,
+        )
+
+        return DetachRocketEnsembleClassifier(
+            random_state=random_state, n_jobs=n_jobs, **kwargs
+        )
+    elif (
+        c == "classwiseminirocketclassifier"
+        or c == "classwiseminirocket"
+        or c == "class-wise-minirocket"
+        or c == "cw-minirocket"
+    ):
+        from tsml_eval.estimators.classification.convolution_based import (
+            ClassWiseMiniRocketClassifier,
+        )
+
+        return ClassWiseMiniRocketClassifier(
+            random_state=random_state, n_jobs=n_jobs, **kwargs
+        )
     else:
         raise ValueError(f"UNKNOWN CLASSIFIER: {c} in get_classifier_by_name")
 
