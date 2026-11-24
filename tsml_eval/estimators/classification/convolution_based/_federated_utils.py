@@ -8,6 +8,7 @@ only uses its own cases to fit its local models.
 __maintainer__ = ["MatthewMiddlehurst"]
 
 from concurrent.futures import ThreadPoolExecutor
+from itertools import repeat
 
 import numpy as np
 from aeon.transformations.collection import Normalizer
@@ -229,13 +230,13 @@ def _federated_ridge(client_features, client_y, n_classes, n_jobs=1):
         with ThreadPoolExecutor(max_workers=min(n_jobs, len(A_clients))) as pool:
             selected = list(
                 pool.map(
-                    lambda args: _client_lambda(*args),
-                    [
-                        (X, y, A, A_c, b, b_c)
-                        for X, y, A_c, b_c in zip(
-                            client_features, client_y, A_clients, b_clients
-                        )
-                    ],
+                    _client_lambda,
+                    client_features,
+                    client_y,
+                    repeat(A),
+                    A_clients,
+                    repeat(b),
+                    b_clients,
                 )
             )
 

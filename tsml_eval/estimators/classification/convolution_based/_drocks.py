@@ -8,7 +8,7 @@ from aeon.classification import BaseClassifier
 from aeon.utils.validation import check_n_jobs
 from scipy.special import expit, xlogy
 from sklearn.preprocessing import LabelBinarizer
-from sklearn.utils import check_random_state
+from sklearn.utils import check_random_state, gen_batches
 
 from tsml_eval.estimators.classification.convolution_based._federated_utils import (
     _normalise,
@@ -268,11 +268,7 @@ def _fit_mlp(X, y, rng, max_iter):
     t = 0
 
     eps = np.finfo(X.dtype).eps
-    batch_size = np.clip(2, 1, n_samples)
-    starts = list(range(0, n_samples - n_samples % batch_size, batch_size))
-    batches = [slice(start, start + batch_size) for start in starts]
-    if n_samples % batch_size:
-        batches.append(slice(n_samples - n_samples % batch_size, n_samples))
+    batches = list(gen_batches(n_samples, np.clip(2, 1, n_samples)))
 
     sample_idx = np.arange(n_samples, dtype=int)
     best_loss = np.inf
@@ -306,10 +302,8 @@ def _fit_mlp(X, y, rng, max_iter):
                     .mean(axis=0)
                     .sum()
                 )
-            values = 0
             s = params[0].ravel()
-            values += np.dot(s, s)
-            loss += (0.5 * alpha) * values / sw_sum
+            loss += (0.5 * alpha) * np.dot(s, s) / sw_sum
 
             # gradients
             deltas = output - y_batch
