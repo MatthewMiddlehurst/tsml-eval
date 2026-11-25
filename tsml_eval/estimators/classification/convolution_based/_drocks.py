@@ -36,11 +36,13 @@ class DROCKSClassifier(BaseClassifier):
 
     This follows the reference implementation [2]_, including its split of the data
     between clients. As in the reference code, every client in the first round uses
-    the first client's kernels, and the final intercept is the sum of all intercepts
-    fitted during training divided by the number of clients. Only the first entry of
-    this intercept is added to every output, so it has no effect on multiclass
-    predictions. The published results come from a version of the code before commit
-    ``fc06626``, which passes kernels on only in the first round.
+    the first client's kernels. The final intercept is the mean of the client
+    intercepts in the last round. Two bugs in the reference code are not reproduced:
+    it sums the intercepts of every round and adds only the first entry to every
+    output, and, through list aliasing, later clients in a round also skip the first
+    client's kernels when topping up. The published results come from a version of
+    the code before commit ``fc06626``, which passes kernels on only in the first
+    round.
 
     Parameters
     ----------
@@ -67,8 +69,9 @@ class DROCKSClassifier(BaseClassifier):
     coef_ : np.ndarray
         The weights of the final model, of shape ``(len(seeds_), 1)`` for binary
         problems and ``(len(seeds_), n_classes_)`` otherwise.
-    intercept_ : float
-        The intercept of the final model.
+    intercept_ : np.ndarray
+        The intercepts of the final model, of shape ``(1,)`` for binary problems and
+        ``(n_classes_,)`` otherwise.
     n_rounds_ : int
         The number of rounds run.
 
@@ -135,13 +138,13 @@ class DROCKSClassifier(BaseClassifier):
         features = [_SeededRocketFeatures(X[idx], self._n_jobs) for idx in clients]
 
         seeds = list(range(self.n_kernels))
-        intercept = 0
         selected = []
         selected_set = set()
         previous_selected = None
         used_in_past_rounds = set()
         used_so_far = set()
         for i in range(self.n_rounds):
+            intercept = 0
             for c, idx in enumerate(clients):
                 used_seeds = seeds
 
@@ -171,11 +174,6 @@ class DROCKSClassifier(BaseClassifier):
                     seeds = selected + new_seeds
 
                 used_so_far.update(used_seeds)
-                # the reference code's list of seeds used in earlier rounds is the
-                # same object as its running list until the first client of the
-                # round extends it, so later clients also skip that client's seeds
-                if i > 0 and c == 0:
-                    used_in_past_rounds.update(used_seeds)
 
             used_in_past_rounds = set(used_so_far)
 
@@ -185,7 +183,7 @@ class DROCKSClassifier(BaseClassifier):
 
         self.seeds_ = np.array(used_seeds)
         self.coef_ = w
-        self.intercept_ = (intercept / self.n_clients)[0]
+        self.intercept_ = intercept / self.n_clients
         self.n_rounds_ = i + 1
 
         return self

@@ -35,9 +35,10 @@ class FROCKSClassifier(BaseClassifier):
     predict.
 
     This follows the reference implementation [2]_, including its split of the data
-    between clients. The intercept also carries over between rounds as in the
-    reference code: each round it is set to the previous intercept plus the sum of
-    the client intercepts, divided by the number of clients.
+    between clients. The intercept is the mean of the client intercepts in each
+    round. The reference code does not reset it between rounds, so each round adds
+    the previous round's intercept before dividing by the number of clients; this
+    is treated as a bug and not reproduced.
 
     Parameters
     ----------
@@ -136,7 +137,6 @@ class FROCKSClassifier(BaseClassifier):
             np.arange(c * self.n_kernels, (c + 1) * self.n_kernels)
             for c in range(self.n_clients)
         ]
-        intercept = 0
         weights = None
         self.n_rounds_ = 0
         for _ in range(self.n_rounds):
@@ -145,6 +145,7 @@ class FROCKSClassifier(BaseClassifier):
 
             client_weights = []
             selected_seeds = []
+            intercept = 0
             for c, idx in enumerate(clients):
                 lr = LogisticRegression()
                 lr.fit(features[c].transform(client_seeds[c]), y[idx])
