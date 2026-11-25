@@ -111,7 +111,7 @@ class MiniFed2RCClassifier(BaseClassifier):
         rng = check_random_state(self.random_state)
         y = np.array([self._class_dictionary[label] for label in y])
 
-        clients = _split_clients(X, y, self.n_clients, rng, repeat_initial=False)
+        clients = _split_clients(X, y, self.n_clients, rng, reuse_small_classes=False)
 
         # clients must share a seed so their kernels and channels match
         if self.random_state is None or isinstance(

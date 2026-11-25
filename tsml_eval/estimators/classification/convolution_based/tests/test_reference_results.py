@@ -4,8 +4,9 @@ The expected values come from running the reference implementations with aeon's
 Rocket, MiniRocket, and MultiRocket on datasets distributed with aeon, with
 labels encoded in the order of ``classes_``. Kernel counts and iteration
 budgets are reduced where needed so the test suite runs quickly. For FROCKS and
-DROCKS, the reference code was run with the same intercept fixes, and for DROCKS
-the same seed list aliasing fix, as the classifiers apply.
+DROCKS, the reference code was run with the same bug fixes as the classifiers
+apply: the intercepts, not dealing cases to clients twice, and for DROCKS the
+seed list aliasing.
 """
 
 import numpy as np
@@ -27,15 +28,24 @@ from tsml_eval.estimators.classification.convolution_based import (
 # Federated ROCKET reference results:
 # classifier, params, dataset, seed, accuracy, rounds, kernels, lambda
 FEDERATED_REFERENCE_RESULTS = [
-    (FROCKSClassifier, {"n_kernels": 100}, "GunPoint", 1, 0.84, 5, 55, None),
+    (
+        FROCKSClassifier,
+        {"n_kernels": 100},
+        "GunPoint",
+        1,
+        0.8266666666666667,
+        5,
+        52,
+        None,
+    ),
     (
         FROCKSClassifier,
         {"n_kernels": 100},
         "GunPoint",
         2,
-        0.8466666666666667,
+        0.8533333333333334,
         5,
-        51,
+        55,
         None,
     ),
     (
@@ -43,7 +53,7 @@ FEDERATED_REFERENCE_RESULTS = [
         {"n_kernels": 40, "max_iter": 100},
         "GunPoint",
         1,
-        0.5266666666666666,
+        0.49333333333333335,
         5,
         40,
         None,
@@ -53,17 +63,7 @@ FEDERATED_REFERENCE_RESULTS = [
         {"n_kernels": 40, "max_iter": 100},
         "GunPoint",
         2,
-        0.49333333333333335,
-        4,
-        40,
-        None,
-    ),
-    (
-        DROCKSClassifier,
-        {"n_kernels": 40, "max_iter": 100},
-        "ArrowHead",
-        1,
-        0.6685714285714286,
+        0.5066666666666667,
         6,
         40,
         None,
@@ -72,9 +72,19 @@ FEDERATED_REFERENCE_RESULTS = [
         DROCKSClassifier,
         {"n_kernels": 40, "max_iter": 100},
         "ArrowHead",
+        1,
+        0.6114285714285714,
+        5,
+        40,
+        None,
+    ),
+    (
+        DROCKSClassifier,
+        {"n_kernels": 40, "max_iter": 100},
+        "ArrowHead",
         2,
-        0.6057142857142858,
-        4,
+        0.3028571428571429,
+        6,
         40,
         None,
     ),

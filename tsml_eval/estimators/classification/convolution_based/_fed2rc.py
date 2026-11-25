@@ -128,7 +128,7 @@ class Fed2RCClassifier(BaseClassifier):
         y = np.array([self._class_dictionary[label] for label in y])
 
         n_top = self.n_kernels // self.n_clients
-        clients = _split_clients(X, y, self.n_clients, rng, repeat_initial=False)
+        clients = _split_clients(X, y, self.n_clients, rng, reuse_small_classes=False)
         features = [_SeededRocketFeatures(X[idx], self._n_jobs) for idx in clients]
 
         client_seeds = [

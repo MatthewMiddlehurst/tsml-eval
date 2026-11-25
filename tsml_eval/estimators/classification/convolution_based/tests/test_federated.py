@@ -22,23 +22,27 @@ from tsml_eval.estimators.classification.convolution_based._federated_utils impo
 )
 
 
-def test_split_clients_repeat_initial():
+def test_split_clients_reuse_small_classes():
     """Test the FROCKS and DROCKS split gives every client every class."""
     X = np.random.RandomState(0).random_sample((18, 1, 10))
     y = np.array([0] * 10 + [1] * 6 + [2] * 2)
-    clients = _split_clients(X, y, 4, np.random.RandomState(0), repeat_initial=True)
+    clients = _split_clients(
+        X, y, 4, np.random.RandomState(0), reuse_small_classes=True
+    )
 
-    # one case of each class per client is dealt twice
-    assert sum(len(c) for c in clients) == len(y) + 3 * 4
     assert all(set(y[c]) == {0, 1, 2} for c in clients)
-    assert set(np.concatenate(clients)) == set(range(len(y)))
+    # only the two cases of the small class are used twice
+    counts = np.bincount(np.concatenate(clients), minlength=len(y))
+    assert np.array_equal(counts, [1] * 16 + [2] * 2)
 
 
 def test_split_clients_no_repeat():
     """Test the Fed2RC split uses each case once."""
     X = np.random.RandomState(0).random_sample((18, 1, 10))
     y = np.array([0] * 10 + [1] * 6 + [2] * 2)
-    clients = _split_clients(X, y, 4, np.random.RandomState(0), repeat_initial=False)
+    clients = _split_clients(
+        X, y, 4, np.random.RandomState(0), reuse_small_classes=False
+    )
 
     assert sorted(np.concatenate(clients)) == list(range(len(y)))
     assert all({0, 1} <= set(y[c]) for c in clients)
@@ -53,7 +57,9 @@ def test_split_clients_no_repeat_skips_duplicates():
     X[11] = 0.0 * X[11]
     y = np.array([0] * 10 + [1] * 6 + [2] * 2)
     # with one client only one case per class is handed out before the check
-    clients = _split_clients(X, y, 1, np.random.RandomState(0), repeat_initial=False)
+    clients = _split_clients(
+        X, y, 1, np.random.RandomState(0), reuse_small_classes=False
+    )
 
     used = np.concatenate(clients)
     assert len(used) == len(y) - 2
@@ -103,7 +109,7 @@ def test_split_clients_too_few_cases():
     X = np.random.RandomState(0).random_sample((3, 1, 10))
     y = np.array([0, 1, 2])
     with pytest.raises(ValueError, match="at least n_clients"):
-        _split_clients(X, y, 4, np.random.RandomState(0), repeat_initial=False)
+        _split_clients(X, y, 4, np.random.RandomState(0), reuse_small_classes=False)
 
 
 @pytest.mark.parametrize("classifier", [FROCKSClassifier, DROCKSClassifier])

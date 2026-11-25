@@ -34,15 +34,18 @@ class DROCKSClassifier(BaseClassifier):
     selects no new kernel, or after ``n_rounds`` rounds. The model of the last client
     is used to predict.
 
-    This follows the reference implementation [2]_, including its split of the data
-    between clients. As in the reference code, every client in the first round uses
-    the first client's kernels. The final intercept is the mean of the client
-    intercepts in the last round. Two bugs in the reference code are not reproduced:
-    it sums the intercepts of every round and adds only the first entry to every
-    output, and, through list aliasing, later clients in a round also skip the first
-    client's kernels when topping up. The published results come from a version of
-    the code before commit ``fc06626``, which passes kernels on only in the first
-    round.
+    This follows the reference implementation [2]_, with three of its bugs fixed. As
+    in the reference code, every client in the first round uses the first client's
+    kernels, and a class with fewer cases than clients reuses its cases so every
+    client gets every class. The final intercept is the mean of the client
+    intercepts in the last round, where the reference code sums the intercepts of
+    every round and adds only the first entry to every output. Later clients in a
+    round no longer also skip the first client's kernels when topping up, which comes
+    from list aliasing in the reference code. Clients get each case once, where the
+    reference split deals the first case of each class given to each client a second
+    time, as the authors fixed in their later Fed2RC code. The published results come
+    from a version of the code before commit ``fc06626``, which passes kernels on
+    only in the first round.
 
     Parameters
     ----------
@@ -134,7 +137,7 @@ class DROCKSClassifier(BaseClassifier):
         y = np.array([self._class_dictionary[label] for label in y])
 
         n_top = self.n_kernels // self.n_clients
-        clients = _split_clients(X, y, self.n_clients, rng, repeat_initial=True)
+        clients = _split_clients(X, y, self.n_clients, rng, reuse_small_classes=True)
         features = [_SeededRocketFeatures(X[idx], self._n_jobs) for idx in clients]
 
         seeds = list(range(self.n_kernels))

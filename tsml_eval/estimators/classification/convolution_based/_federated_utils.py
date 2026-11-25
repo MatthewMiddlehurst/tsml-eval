@@ -20,7 +20,7 @@ from numba import get_num_threads, set_num_threads
 from threadpoolctl import threadpool_limits
 
 
-def _split_clients(X, y, n_clients, rng, repeat_initial):
+def _split_clients(X, y, n_clients, rng, reuse_small_classes):
     """Split case indices between clients using the reference uniform split.
 
     Every client first receives one case of each class. The remaining cases are then
@@ -36,16 +36,17 @@ def _split_clients(X, y, n_clients, rng, repeat_initial):
         Number of clients.
     rng : np.random.RandomState
         Random number generator.
-    repeat_initial : bool
-        If True, as in the FROCKS and DROCKS code, the cases handed out first are
-        dealt again along with all other cases, so they appear twice, and a class with
-        fewer cases than clients reuses its cases. If False, as in the Fed2RC code, a
-        case is skipped if a case with the same series and label has already been
-        given out, and a class with fewer cases than clients only goes to the first
-        clients. If no class has at least ``n_clients`` cases, some clients would get
-        no cases, and the cases are instead shuffled and split into ``n_clients``
-        equal parts, dropping any remainder, as the Fed2RC code does for such
-        datasets.
+    reuse_small_classes : bool
+        If True, as in the FROCKS and DROCKS code, a class with fewer cases than
+        clients reuses its cases, so every client gets every class. The cases handed
+        out first are not dealt again. The reference code deals them a second time,
+        which the authors fixed in their later Fed2RC code, so this is treated as a
+        bug and not reproduced. If False, as in the Fed2RC code, a class with fewer
+        cases than clients only goes to the first clients, and a case is skipped if a
+        case with the same series and label has already been given out. If no class
+        has at least ``n_clients`` cases, some clients would then get no cases, and
+        the cases are instead shuffled and split into ``n_clients`` equal parts,
+        dropping any remainder, as the Fed2RC code does for such datasets.
 
     Returns
     -------
@@ -58,7 +59,7 @@ def _split_clients(X, y, n_clients, rng, repeat_initial):
             f"{len(y)}."
         )
 
-    if not repeat_initial and np.bincount(y).max() < n_clients:
+    if not reuse_small_classes and np.bincount(y).max() < n_clients:
         shuffled = rng.permutation(len(y))
         n = len(y) // n_clients
         return [shuffled[i * n : (i + 1) * n] for i in range(n_clients)]
@@ -70,22 +71,23 @@ def _split_clients(X, y, n_clients, rng, repeat_initial):
         indices = np.where(y == label)[0]
         rng.shuffle(indices)
 
-        n = n_clients if repeat_initial else min(n_clients, len(indices))
+        n = n_clients if reuse_small_classes else min(n_clients, len(indices))
         for i in range(n):
             clients[i].append(indices[i % len(indices)])
 
-    # the Fed2RC code compares values, so duplicated cases are only used once.
-    # adding 0.0 makes -0.0 and 0.0 equal, as they are for np.array_equal
-    if not repeat_initial:
+    if reuse_small_classes:
+        keys = list(range(len(y)))
+    else:
+        # the Fed2RC code compares values, so duplicated cases are only used once.
+        # adding 0.0 makes -0.0 and 0.0 equal, as they are for np.array_equal
         keys = [(y[i], (X[i] + 0.0).tobytes()) for i in range(len(y))]
-        dealt = {keys[i] for client in clients for i in client}
+    dealt = {keys[i] for client in clients for i in client}
 
     sizes = [len(client) for client in clients]
     for i in shuffled:
-        if not repeat_initial:
-            if keys[i] in dealt:
-                continue
-            dealt.add(keys[i])
+        if keys[i] in dealt:
+            continue
+        dealt.add(keys[i])
 
         smallest = int(np.argmin(sizes))
         clients[smallest].append(i)

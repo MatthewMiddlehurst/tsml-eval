@@ -34,11 +34,12 @@ class FROCKSClassifier(BaseClassifier):
     ``n_rounds`` rounds. The aggregated linear model of the last round is used to
     predict.
 
-    This follows the reference implementation [2]_, including its split of the data
-    between clients. The intercept is the mean of the client intercepts in each
-    round. The reference code does not reset it between rounds, so each round adds
-    the previous round's intercept before dividing by the number of clients; this
-    is treated as a bug and not reproduced.
+    This follows the reference implementation [2]_, with two of its bugs fixed. The
+    intercept is the mean of the client intercepts in each round, where the reference
+    code does not reset it between rounds, so each round adds the previous round's
+    intercept before dividing by the number of clients. Clients get each case once,
+    where the reference split deals the first case of each class given to each
+    client a second time, as the authors fixed in their later Fed2RC code.
 
     Parameters
     ----------
@@ -130,7 +131,7 @@ class FROCKSClassifier(BaseClassifier):
         y = np.array([self._class_dictionary[label] for label in y])
 
         n_top = self.n_kernels // self.n_clients
-        clients = _split_clients(X, y, self.n_clients, rng, repeat_initial=True)
+        clients = _split_clients(X, y, self.n_clients, rng, reuse_small_classes=True)
         features = [_SeededRocketFeatures(X[idx], self._n_jobs) for idx in clients]
 
         client_seeds = [
