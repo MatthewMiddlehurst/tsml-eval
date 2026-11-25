@@ -15,6 +15,48 @@ convolution_based_classifiers = [
     ["multiarsenal", "multi-arsenal"],
     ["hydraclassifier", "hydra"],
     ["multirockethydraclassifier", "multirockethydra", "multirocket-hydra", "mrhydra"],
+    ["frocksclassifier", "frocks"],
+    ["drocksclassifier", "drocks"],
+    ["fed2rcclassifier", "fed2rc"],
+    ["minifed2rcclassifier", "minifed2rc"],
+    ["srocketclassifier", "srocket", "s-rocket"],
+    ["pocketclassifier", "pocket"],
+    ["detachrocketclassifier", "detachrocket", "detach-rocket"],
+    [
+        "detachrocketensembleclassifier",
+        "detachrocketensemble",
+        "detach-rocket-ensemble",
+        "detachensemble",
+        "detach-ensemble",
+    ],
+    [
+        "classwiseminirocketclassifier",
+        "classwiseminirocket",
+        "class-wise-minirocket",
+        "cw-minirocket",
+    ],
+    ["hdcminirocketclassifier", "hdcminirocket", "hdc-minirocket"],
+    ["hdcmultirocketclassifier", "hdcmultirocket", "hdc-multirocket"],
+    ["hdchydraclassifier", "hdchydra", "hdc-hydra"],
+    [
+        "hdcmultirockethydraclassifier",
+        "hdcmultirockethydra",
+        "hdc-multirocket-hydra",
+        "hdcmrhydra",
+    ],
+    ["dynamicrocketclassifier", "dynamicrocket", "dynamic-rocket"],
+    ["ftfvcclassifier", "ftfvc", "ft-fvc"],
+    [
+        "ceemdmultirocketclassifier",
+        "ceemdmultirocket",
+        "ceemd-multirocket",
+    ],
+    ["kgmtpclassifier", "kgmtp", "kg-mtp"],
+    ["sprocketclassifier", "sprocket"],
+    ["selfrocketclassifier", "selfrocket", "self-rocket"],
+    ["hitrocketclassifier", "hitrocket", "hit-rocket"],
+    ["rocketpfnclassifier", "rocketpfn", "rocket-pfn"],
+    ["mashtclassifier", "masht"],
 ]
 deep_learning_classifiers = [
     ["timecnnclassifier", "timecnn", "cnnclassifier", "cnn"],
@@ -309,6 +351,182 @@ def _set_classifier_convolution_based(
         return MultiRocketHydraClassifier(
             random_state=random_state, n_jobs=n_jobs, **kwargs
         )
+    elif c == "frocksclassifier" or c == "frocks":
+        from tsml_eval.estimators.classification.convolution_based import (
+            FROCKSClassifier,
+        )
+
+        return FROCKSClassifier(random_state=random_state, n_jobs=n_jobs, **kwargs)
+    elif c == "drocksclassifier" or c == "drocks":
+        from tsml_eval.estimators.classification.convolution_based import (
+            DROCKSClassifier,
+        )
+
+        return DROCKSClassifier(random_state=random_state, n_jobs=n_jobs, **kwargs)
+    elif c == "fed2rcclassifier" or c == "fed2rc":
+        from tsml_eval.estimators.classification.convolution_based import (
+            Fed2RCClassifier,
+        )
+
+        return Fed2RCClassifier(random_state=random_state, n_jobs=n_jobs, **kwargs)
+    elif c == "minifed2rcclassifier" or c == "minifed2rc":
+        from tsml_eval.estimators.classification.convolution_based import (
+            MiniFed2RCClassifier,
+        )
+
+        return MiniFed2RCClassifier(random_state=random_state, n_jobs=n_jobs, **kwargs)
+    elif c == "srocketclassifier" or c == "srocket" or c == "s-rocket":
+        from tsml_eval.estimators.classification.convolution_based import (
+            SRocketClassifier,
+        )
+
+        return SRocketClassifier(random_state=random_state, n_jobs=n_jobs, **kwargs)
+    elif c == "pocketclassifier" or c == "pocket":
+        from tsml_eval.estimators.classification.convolution_based import (
+            POCKETClassifier,
+        )
+
+        return POCKETClassifier(random_state=random_state, n_jobs=n_jobs, **kwargs)
+    elif c == "detachrocketclassifier" or c == "detachrocket" or c == "detach-rocket":
+        from tsml_eval.estimators.classification.convolution_based import (
+            DetachRocketClassifier,
+        )
+
+        return DetachRocketClassifier(
+            random_state=random_state, n_jobs=n_jobs, **kwargs
+        )
+    elif (
+        c == "detachrocketensembleclassifier"
+        or c == "detachrocketensemble"
+        or c == "detach-rocket-ensemble"
+        or c == "detachensemble"
+        or c == "detach-ensemble"
+    ):
+        from tsml_eval.estimators.classification.convolution_based import (
+            DetachRocketEnsembleClassifier,
+        )
+
+        return DetachRocketEnsembleClassifier(
+            random_state=random_state, n_jobs=n_jobs, **kwargs
+        )
+    elif (
+        c == "classwiseminirocketclassifier"
+        or c == "classwiseminirocket"
+        or c == "class-wise-minirocket"
+        or c == "cw-minirocket"
+    ):
+        from tsml_eval.estimators.classification.convolution_based import (
+            ClassWiseMiniRocketClassifier,
+        )
+
+        return ClassWiseMiniRocketClassifier(
+            random_state=random_state, n_jobs=n_jobs, **kwargs
+        )
+    elif (
+        c == "hdcminirocketclassifier" or c == "hdcminirocket" or c == "hdc-minirocket"
+    ):
+        from tsml_eval.estimators.classification.convolution_based import (
+            HDCMiniRocketClassifier,
+        )
+
+        return HDCMiniRocketClassifier(
+            random_state=random_state, n_jobs=n_jobs, **kwargs
+        )
+    elif (
+        c == "hdcmultirocketclassifier"
+        or c == "hdcmultirocket"
+        or c == "hdc-multirocket"
+    ):
+        from tsml_eval.estimators.classification.convolution_based import (
+            HDCMultiRocketClassifier,
+        )
+
+        return HDCMultiRocketClassifier(
+            random_state=random_state, n_jobs=n_jobs, **kwargs
+        )
+    elif c == "hdchydraclassifier" or c == "hdchydra" or c == "hdc-hydra":
+        from tsml_eval.estimators.classification.convolution_based import (
+            HDCHydraClassifier,
+        )
+
+        return HDCHydraClassifier(random_state=random_state, n_jobs=n_jobs, **kwargs)
+    elif (
+        c == "hdcmultirockethydraclassifier"
+        or c == "hdcmultirockethydra"
+        or c == "hdc-multirocket-hydra"
+        or c == "hdcmrhydra"
+    ):
+        from tsml_eval.estimators.classification.convolution_based import (
+            HDCMultiRocketHydraClassifier,
+        )
+
+        return HDCMultiRocketHydraClassifier(
+            random_state=random_state, n_jobs=n_jobs, **kwargs
+        )
+    elif (
+        c == "dynamicrocketclassifier" or c == "dynamicrocket" or c == "dynamic-rocket"
+    ):
+        from tsml_eval.estimators.classification.convolution_based import (
+            DynamicRocketClassifier,
+        )
+
+        return DynamicRocketClassifier(
+            random_state=random_state, n_jobs=n_jobs, **kwargs
+        )
+    elif c == "ftfvcclassifier" or c == "ftfvc" or c == "ft-fvc":
+        from tsml_eval.estimators.classification.convolution_based import (
+            FTFVCClassifier,
+        )
+
+        return FTFVCClassifier(random_state=random_state, n_jobs=n_jobs, **kwargs)
+    elif (
+        c == "ceemdmultirocketclassifier"
+        or c == "ceemdmultirocket"
+        or c == "ceemd-multirocket"
+    ):
+        from tsml_eval.estimators.classification.convolution_based import (
+            CEEMDMultiRocketClassifier,
+        )
+
+        return CEEMDMultiRocketClassifier(
+            random_state=random_state, n_jobs=n_jobs, **kwargs
+        )
+    elif c == "kgmtpclassifier" or c == "kgmtp" or c == "kg-mtp":
+        from tsml_eval.estimators.classification.convolution_based import (
+            KGMTPClassifier,
+        )
+
+        return KGMTPClassifier(random_state=random_state, n_jobs=n_jobs, **kwargs)
+    elif c == "sprocketclassifier" or c == "sprocket":
+        from tsml_eval.estimators.classification.convolution_based import (
+            SPROCKETClassifier,
+        )
+
+        return SPROCKETClassifier(random_state=random_state, n_jobs=n_jobs, **kwargs)
+    elif c == "selfrocketclassifier" or c == "selfrocket" or c == "self-rocket":
+        from tsml_eval.estimators.classification.convolution_based import (
+            SelFRocketClassifier,
+        )
+
+        return SelFRocketClassifier(random_state=random_state, n_jobs=n_jobs, **kwargs)
+    elif c == "hitrocketclassifier" or c == "hitrocket" or c == "hit-rocket":
+        from tsml_eval.estimators.classification.convolution_based import (
+            HITRocketClassifier,
+        )
+
+        return HITRocketClassifier(random_state=random_state, n_jobs=n_jobs, **kwargs)
+    elif c == "rocketpfnclassifier" or c == "rocketpfn" or c == "rocket-pfn":
+        from tsml_eval.estimators.classification.convolution_based import (
+            RocketPFNClassifier,
+        )
+
+        return RocketPFNClassifier(random_state=random_state, n_jobs=n_jobs, **kwargs)
+    elif c == "mashtclassifier" or c == "masht":
+        from tsml_eval.estimators.classification.convolution_based import (
+            MASHTClassifier,
+        )
+
+        return MASHTClassifier(random_state=random_state, n_jobs=n_jobs, **kwargs)
     else:
         raise ValueError(f"UNKNOWN CLASSIFIER: {c} in get_classifier_by_name")
 

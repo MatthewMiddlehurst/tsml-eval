@@ -13,11 +13,34 @@ Misc estimators for use with `tsml-eval`.
     :toctree: auto_generated/
     :template: class.rst
 
+    estimators.classification.convolution_based.CEEMDMultiRocketClassifier
+    estimators.classification.convolution_based.ClassWiseMiniRocketClassifier
+    estimators.classification.convolution_based.DetachRocketClassifier
+    estimators.classification.convolution_based.DetachRocketEnsembleClassifier
+    estimators.classification.convolution_based.DROCKSClassifier
+    estimators.classification.convolution_based.DynamicRocketClassifier
+    estimators.classification.convolution_based.Fed2RCClassifier
+    estimators.classification.convolution_based.FROCKSClassifier
+    estimators.classification.convolution_based.FTFVCClassifier
+    estimators.classification.convolution_based.HDCHydraClassifier
+    estimators.classification.convolution_based.HDCMiniRocketClassifier
+    estimators.classification.convolution_based.HDCMultiRocketClassifier
+    estimators.classification.convolution_based.HDCMultiRocketHydraClassifier
+    estimators.classification.convolution_based.HITRocketClassifier
+    estimators.classification.convolution_based.KGMTPClassifier
+    estimators.classification.convolution_based.MASHTClassifier
+    estimators.classification.convolution_based.MiniFed2RCClassifier
+    estimators.classification.convolution_based.POCKETClassifier
+    estimators.classification.convolution_based.RocketPFNClassifier
+    estimators.classification.convolution_based.SelFRocketClassifier
+    estimators.classification.convolution_based.SPROCKETClassifier
+    estimators.classification.convolution_based.SRocketClassifier
     estimators.classification.hybrid.FromFileHIVECOTE
     estimators.clustering.consensus.IterativeVotingClustering
     estimators.clustering.consensus.FromFileIterativeVotingClustering
     estimators.clustering.consensus.SimpleVote
     estimators.clustering.consensus.FromFileSimpleVote
+    estimators.regression.convolution_based.RocketXGBoostRegressor
 ```
 
 ## Evaluation: [tsml_eval.evaluation](https://github.com/time-series-machine-learning/tsml-eval/tree/main/tsml_eval/evaluation)
