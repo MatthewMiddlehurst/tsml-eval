@@ -225,9 +225,7 @@ def _self_rocket_transform(X, X1, parameters, parameters1, indices):
                     features[example_index, col + 3 * n_features1] = (
                         mean_index / ppv if ppv > 0 else -1.0
                     )
-                    features[example_index, col + 4 * n_features1] = (
-                        zero_count / c_len
-                    )
+                    features[example_index, col + 4 * n_features1] = zero_count / c_len
 
                 feature_index_start = feature_index_end
 

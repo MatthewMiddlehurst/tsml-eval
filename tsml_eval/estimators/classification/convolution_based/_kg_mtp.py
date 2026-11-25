@@ -213,8 +213,7 @@ def _pool_kernel(
 
         for j in range(c_len):
             if j < c_len - 1 and (
-                (C[j] > bias and C[j + 1] < bias)
-                or (C[j] < bias and C[j + 1] > bias)
+                (C[j] > bias and C[j + 1] < bias) or (C[j] < bias and C[j + 1] > bias)
             ):
                 zero_count += 1
             if C[j] > bias:
@@ -324,9 +323,9 @@ def _transform_single(
             C_alpha, C_gamma = _convolve_shift(A, G, padded_len, dilation, padding)
             for k in range(20):
                 i0, i1, i2 = ind3[k]
-                C = (
-                    C_alpha + C_gamma[i0] + C_gamma[i1] + C_gamma[i2]
-                ).astype(np.float32)
+                C = (C_alpha + C_gamma[i0] + C_gamma[i1] + C_gamma[i2]).astype(
+                    np.float32
+                )
                 _pool_kernel(
                     C,
                     k,

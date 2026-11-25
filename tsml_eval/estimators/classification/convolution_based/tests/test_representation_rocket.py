@@ -14,8 +14,8 @@ from tsml_eval.estimators.classification.convolution_based import (
     SPROCKETClassifier,
 )
 from tsml_eval.estimators.classification.convolution_based._ceemd_multirocket import (
-    _ceemd_batch,
     _INDICES_6_2,
+    _ceemd_batch,
     _transform_6_2,
 )
 from tsml_eval.estimators.classification.convolution_based._ft_fvc import (

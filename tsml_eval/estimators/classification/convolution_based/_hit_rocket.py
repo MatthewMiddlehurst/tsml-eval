@@ -209,9 +209,9 @@ class HITRocketClassifier(BaseClassifier):
                         co_exp = co.unsqueeze(-1).unsqueeze(-1)
                         b_exp = b.unsqueeze(0).unsqueeze(2)
                         ppv = (co_exp > b_exp).float().mean(dim=2)
-                        features[start:end, col : col + feat_per_dil] = (
-                            ppv.reshape(end - start, feat_per_dil).numpy()
-                        )
+                        features[start:end, col : col + feat_per_dil] = ppv.reshape(
+                            end - start, feat_per_dil
+                        ).numpy()
                         col += feat_per_dil
         finally:
             torch.set_num_threads(prev_threads)

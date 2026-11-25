@@ -503,9 +503,7 @@ class CEEMDMultiRocketClassifier(BaseClassifier):
         return X_raw
 
     def _decompose(self, X_raw, rng):
-        noise_bank = rng.normal(
-            0.0, 1.0, size=(self.n_realizations, X_raw.shape[1])
-        )
+        noise_bank = rng.normal(0.0, 1.0, size=(self.n_realizations, X_raw.shape[1]))
         prev_threads = get_num_threads()
         set_num_threads(self._n_jobs)
         try:
@@ -531,9 +529,7 @@ class CEEMDMultiRocketClassifier(BaseClassifier):
         prev_threads = get_num_threads()
         set_num_threads(self._n_jobs)
         try:
-            Xt = _transform_6_2(
-                X_rep, dilations, n_feat_per_dil, biases, _INDICES_6_2
-            )
+            Xt = _transform_6_2(X_rep, dilations, n_feat_per_dil, biases, _INDICES_6_2)
         finally:
             set_num_threads(prev_threads)
         return np.nan_to_num(Xt)
@@ -554,9 +550,7 @@ class CEEMDMultiRocketClassifier(BaseClassifier):
         if self.n_features < 375:
             raise ValueError(f"n_features must be >= 375, got {self.n_features}.")
         if self.n_realizations < 1:
-            raise ValueError(
-                f"n_realizations must be >= 1, got {self.n_realizations}."
-            )
+            raise ValueError(f"n_realizations must be >= 1, got {self.n_realizations}.")
         if self.n_siftings < 1:
             raise ValueError(f"n_siftings must be >= 1, got {self.n_siftings}.")
 
@@ -595,9 +589,7 @@ class CEEMDMultiRocketClassifier(BaseClassifier):
                 n_splits=1, test_size=0.5, random_state=split_seed
             )
         else:
-            splitter = ShuffleSplit(
-                n_splits=1, test_size=0.5, random_state=split_seed
-            )
+            splitter = ShuffleSplit(n_splits=1, test_size=0.5, random_state=split_seed)
         tr_idx, val_idx = next(splitter.split(X_raw, y_ind))
         y_tr, y_val = y_ind[tr_idx], y_ind[val_idx]
 
@@ -626,9 +618,7 @@ class CEEMDMultiRocketClassifier(BaseClassifier):
             # Step 3: Fit Improved MultiRocket on raw, selected IMFs*, and 1st diff
             X_diff = np.diff(X_raw, 1)
             active_reps = (
-                [X_raw]
-                + [subseries[i] for i in self.selected_subseries_]
-                + [X_diff]
+                [X_raw] + [subseries[i] for i in self.selected_subseries_] + [X_diff]
             )
             n_reps = len(active_reps)
             rep_seeds = rng.randint(np.iinfo(np.int32).max, size=n_reps)
@@ -661,9 +651,7 @@ class CEEMDMultiRocketClassifier(BaseClassifier):
             pred_rng = np.random.RandomState(self._predict_noise_seed)
             subseries = self._decompose(X_raw, pred_rng)
             active_reps = (
-                [X_raw]
-                + [subseries[i] for i in self.selected_subseries_]
-                + [X_diff]
+                [X_raw] + [subseries[i] for i in self.selected_subseries_] + [X_diff]
             )
         else:
             active_reps = [X_raw, X_diff]
