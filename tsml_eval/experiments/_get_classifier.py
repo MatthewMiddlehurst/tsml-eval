@@ -35,6 +35,16 @@ convolution_based_classifiers = [
         "class-wise-minirocket",
         "cw-minirocket",
     ],
+    ["hdcminirocketclassifier", "hdcminirocket", "hdc-minirocket"],
+    ["hdcmultirocketclassifier", "hdcmultirocket", "hdc-multirocket"],
+    ["hdchydraclassifier", "hdchydra", "hdc-hydra"],
+    [
+        "hdcmultirockethydraclassifier",
+        "hdcmultirockethydra",
+        "hdc-multirocket-hydra",
+        "hdcmrhydra",
+    ],
+    ["dynamicrocketclassifier", "dynamicrocket", "dynamic-rocket"],
 ]
 deep_learning_classifiers = [
     ["timecnnclassifier", "timecnn", "cnnclassifier", "cnn"],
@@ -391,6 +401,57 @@ def _set_classifier_convolution_based(
         )
 
         return ClassWiseMiniRocketClassifier(
+            random_state=random_state, n_jobs=n_jobs, **kwargs
+        )
+    elif (
+        c == "hdcminirocketclassifier" or c == "hdcminirocket" or c == "hdc-minirocket"
+    ):
+        from tsml_eval.estimators.classification.convolution_based import (
+            HDCMiniRocketClassifier,
+        )
+
+        return HDCMiniRocketClassifier(
+            random_state=random_state, n_jobs=n_jobs, **kwargs
+        )
+    elif (
+        c == "hdcmultirocketclassifier"
+        or c == "hdcmultirocket"
+        or c == "hdc-multirocket"
+    ):
+        from tsml_eval.estimators.classification.convolution_based import (
+            HDCMultiRocketClassifier,
+        )
+
+        return HDCMultiRocketClassifier(
+            random_state=random_state, n_jobs=n_jobs, **kwargs
+        )
+    elif c == "hdchydraclassifier" or c == "hdchydra" or c == "hdc-hydra":
+        from tsml_eval.estimators.classification.convolution_based import (
+            HDCHydraClassifier,
+        )
+
+        return HDCHydraClassifier(random_state=random_state, n_jobs=n_jobs, **kwargs)
+    elif (
+        c == "hdcmultirockethydraclassifier"
+        or c == "hdcmultirockethydra"
+        or c == "hdc-multirocket-hydra"
+        or c == "hdcmrhydra"
+    ):
+        from tsml_eval.estimators.classification.convolution_based import (
+            HDCMultiRocketHydraClassifier,
+        )
+
+        return HDCMultiRocketHydraClassifier(
+            random_state=random_state, n_jobs=n_jobs, **kwargs
+        )
+    elif (
+        c == "dynamicrocketclassifier" or c == "dynamicrocket" or c == "dynamic-rocket"
+    ):
+        from tsml_eval.estimators.classification.convolution_based import (
+            DynamicRocketClassifier,
+        )
+
+        return DynamicRocketClassifier(
             random_state=random_state, n_jobs=n_jobs, **kwargs
         )
     else:

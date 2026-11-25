@@ -20,8 +20,13 @@ Wrappers and misc estimators for use with `tsml-eval`.
     estimators.classification.convolution_based.DetachRocketClassifier
     estimators.classification.convolution_based.DetachRocketEnsembleClassifier
     estimators.classification.convolution_based.DROCKSClassifier
+    estimators.classification.convolution_based.DynamicRocketClassifier
     estimators.classification.convolution_based.Fed2RCClassifier
     estimators.classification.convolution_based.FROCKSClassifier
+    estimators.classification.convolution_based.HDCHydraClassifier
+    estimators.classification.convolution_based.HDCMiniRocketClassifier
+    estimators.classification.convolution_based.HDCMultiRocketClassifier
+    estimators.classification.convolution_based.HDCMultiRocketHydraClassifier
     estimators.classification.convolution_based.MiniFed2RCClassifier
     estimators.classification.convolution_based.POCKETClassifier
     estimators.classification.convolution_based.SRocketClassifier
