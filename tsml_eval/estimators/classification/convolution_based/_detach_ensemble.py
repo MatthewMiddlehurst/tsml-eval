@@ -188,9 +188,8 @@ class DetachRocketEnsembleClassifier(BaseClassifier):
             seed_rng = np.random.default_rng(self.random_state)
             split_seed = int(seed_rng.integers(0, np.iinfo(np.int32).max))
 
-        member_seeds = (
-            seed_rng.integers(0, 2**32 - 1, size=self.n_estimators, dtype=np.int64)
-            & np.iinfo(np.int32).max
+        member_seeds = seed_rng.integers(
+            0, 2**32 - 1, size=self.n_estimators, dtype=np.int64
         )
         member_kernels = (
             max(84, self.n_kernels // 8)
