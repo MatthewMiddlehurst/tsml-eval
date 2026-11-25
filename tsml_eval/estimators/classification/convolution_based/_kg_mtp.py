@@ -15,9 +15,10 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils import check_random_state
 
-from tsml_eval.estimators.classification.convolution_based._selection_utils import (
+from tsml_eval.estimators.classification.convolution_based._rocket_utils import (
     _check_numba_jobs,
     _L2NormalisedRidgeClassifierCV,
+    _quantiles,
 )
 
 _INDICES_1 = np.arange(6, dtype=np.int32)
@@ -48,11 +49,6 @@ def _fit_dilations(input_length, n_features_budget, max_dilations_per_kernel):
         i = (i + 1) % len(n_features_per_dilation)
 
     return dilations, n_features_per_dilation
-
-
-def _quantiles(n):
-    phi = (np.sqrt(5) + 1) / 2
-    return np.array([((i * phi) % 1) for i in range(1, n + 1)], dtype=np.float32)
 
 
 @njit(fastmath=True, cache=True)

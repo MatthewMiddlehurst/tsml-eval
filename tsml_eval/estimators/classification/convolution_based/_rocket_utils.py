@@ -1,4 +1,4 @@
-"""Shared utilities for kernel and feature selection ROCKET classifiers."""
+"""Shared utilities for the ROCKET variant classifiers."""
 
 __maintainer__ = ["MatthewMiddlehurst"]
 
@@ -12,6 +12,11 @@ from numba import config
 from scipy.linalg import LinAlgWarning
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.linear_model import RidgeClassifier, RidgeClassifierCV
+
+
+def _quantiles(n):
+    phi = (np.sqrt(5) + 1) / 2
+    return np.array([((i * phi) % 1) for i in range(1, n + 1)], dtype=np.float32)
 
 
 def _check_numba_jobs(n_jobs):

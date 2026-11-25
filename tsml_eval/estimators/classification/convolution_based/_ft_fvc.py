@@ -14,7 +14,7 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils import check_random_state
 
-from tsml_eval.estimators.classification.convolution_based._selection_utils import (
+from tsml_eval.estimators.classification.convolution_based._rocket_utils import (
     _check_numba_jobs,
 )
 

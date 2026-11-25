@@ -9,7 +9,7 @@ from aeon.transformations.collection.convolution_based import MiniRocket, Rocket
 from sklearn.model_selection import StratifiedKFold
 from sklearn.utils import check_random_state
 
-from tsml_eval.estimators.classification.convolution_based._selection_utils import (
+from tsml_eval.estimators.classification.convolution_based._rocket_utils import (
     _check_numba_jobs,
     _L2NormalisedRidgeClassifierCV,
     _prune_rocket_kernels,

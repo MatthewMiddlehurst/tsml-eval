@@ -15,7 +15,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils import check_random_state
 
-from tsml_eval.estimators.classification.convolution_based._selection_utils import (
+from tsml_eval.estimators.classification.convolution_based._rocket_utils import (
     _check_numba_jobs,
     _prune_rocket_kernels,
     _quiet_ridge_warnings,

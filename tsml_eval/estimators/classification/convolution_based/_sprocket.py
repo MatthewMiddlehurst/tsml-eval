@@ -24,7 +24,7 @@ from numba import get_num_threads, njit, prange, set_num_threads
 from sklearn.linear_model import RidgeClassifierCV
 from sklearn.utils import check_random_state
 
-from tsml_eval.estimators.classification.convolution_based._selection_utils import (
+from tsml_eval.estimators.classification.convolution_based._rocket_utils import (
     _check_numba_jobs,
     _quiet_ridge_warnings,
 )

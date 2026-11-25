@@ -10,7 +10,7 @@ from tsml_eval.estimators.classification.convolution_based._detach_rocket import
     DetachRocketClassifier,
     _prepare_detach_split,
 )
-from tsml_eval.estimators.classification.convolution_based._selection_utils import (
+from tsml_eval.estimators.classification.convolution_based._rocket_utils import (
     _check_numba_jobs,
     _get_kernel_channel_indicator,
 )

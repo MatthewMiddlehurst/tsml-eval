@@ -16,7 +16,7 @@ from tsml_eval.estimators.classification.convolution_based import (
 from tsml_eval.estimators.classification.convolution_based._cw_minirocket import (
     _detect_knee_channels,
 )
-from tsml_eval.estimators.classification.convolution_based._selection_utils import (
+from tsml_eval.estimators.classification.convolution_based._rocket_utils import (
     _prune_rocket_kernels,
     _rocket_transform,
 )
