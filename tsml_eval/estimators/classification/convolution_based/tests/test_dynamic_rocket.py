@@ -30,10 +30,11 @@ def test_dynamic_rocket_transform():
 
     for k in range(5):
         w = weights[k, : lengths[k]]
-        window = lengths[k] * dilations[k]
+        # every start position where the dilated kernel fits
+        window = (lengths[k] - 1) * dilations[k] + 1
         for i, x in enumerate(X):
             segments = np.array(
-                [x[s : s + window : dilations[k]] for s in range(60 - window)]
+                [x[s : s + window : dilations[k]] for s in range(60 - window + 1)]
             )
             conv = segments @ w + biases[k]
             dtw = [_reference_dtw(s, w) for s in segments]
