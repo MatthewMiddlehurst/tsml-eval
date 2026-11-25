@@ -10,6 +10,7 @@ import numpy as np
 from aeon.utils.validation import check_n_jobs
 from numba import config
 from scipy.linalg import LinAlgWarning
+from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.linear_model import RidgeClassifier, RidgeClassifierCV
 
 
@@ -89,7 +90,7 @@ def _rocket_transform(rocket, X, kernels=None):
     return rocket.transform(X)
 
 
-class _L2NormalisedRidgeClassifierCV:
+class _L2NormalisedRidgeClassifierCV(ClassifierMixin, BaseEstimator):
     """RidgeClassifierCV with column centring and unit L2-norm scaling.
 
     Reproduces ``RidgeClassifierCV(alphas=alphas, normalize=True)`` from
@@ -97,9 +98,11 @@ class _L2NormalisedRidgeClassifierCV:
     """
 
     def __init__(self, alphas=None):
-        self.alphas = np.logspace(-3, 3, 10) if alphas is None else alphas
+        self.alphas = alphas
 
     def fit(self, X, y):
+        """Fit L2-normalised ``RidgeClassifierCV`` on ``(X, y)``."""
+        alphas = np.logspace(-3, 3, 10) if self.alphas is None else self.alphas
         X = np.asarray(X, dtype=np.float64)
         self.mean_ = X.mean(axis=0)
         Xc = X - self.mean_
@@ -107,7 +110,7 @@ class _L2NormalisedRidgeClassifierCV:
         self.scale_ = np.where(scale == 0, 1.0, scale)
 
         with _quiet_ridge_warnings():
-            self.ridge_ = RidgeClassifierCV(alphas=self.alphas).fit(Xc / self.scale_, y)
+            self.ridge_ = RidgeClassifierCV(alphas=alphas).fit(Xc / self.scale_, y)
 
         self.alpha_ = float(self.ridge_.alpha_)
         self.classes_ = self.ridge_.classes_
@@ -118,6 +121,7 @@ class _L2NormalisedRidgeClassifierCV:
         return self
 
     def predict(self, X):
+        """Predict class labels for ``X``."""
         Xn = (np.asarray(X, dtype=np.float64) - self.mean_) / self.scale_
         return self.ridge_.predict(Xn)
 

@@ -13,6 +13,7 @@ Misc estimators for use with `tsml-eval`.
     :toctree: auto_generated/
     :template: class.rst
 
+    estimators.classification.convolution_based.CEEMDMultiRocketClassifier
     estimators.classification.convolution_based.ClassWiseMiniRocketClassifier
     estimators.classification.convolution_based.DetachRocketClassifier
     estimators.classification.convolution_based.DetachRocketEnsembleClassifier
@@ -20,12 +21,17 @@ Misc estimators for use with `tsml-eval`.
     estimators.classification.convolution_based.DynamicRocketClassifier
     estimators.classification.convolution_based.Fed2RCClassifier
     estimators.classification.convolution_based.FROCKSClassifier
+    estimators.classification.convolution_based.FTFVCClassifier
     estimators.classification.convolution_based.HDCHydraClassifier
     estimators.classification.convolution_based.HDCMiniRocketClassifier
     estimators.classification.convolution_based.HDCMultiRocketClassifier
     estimators.classification.convolution_based.HDCMultiRocketHydraClassifier
+    estimators.classification.convolution_based.HITRocketClassifier
+    estimators.classification.convolution_based.KGMTPClassifier
     estimators.classification.convolution_based.MiniFed2RCClassifier
     estimators.classification.convolution_based.POCKETClassifier
+    estimators.classification.convolution_based.SelFRocketClassifier
+    estimators.classification.convolution_based.SPROCKETClassifier
     estimators.classification.convolution_based.SRocketClassifier
     estimators.classification.hybrid.FromFileHIVECOTE
     estimators.clustering.consensus.IterativeVotingClustering

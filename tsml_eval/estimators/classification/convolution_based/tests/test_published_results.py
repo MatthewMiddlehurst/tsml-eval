@@ -2,9 +2,9 @@
 
 The expected values are published mean test accuracies from the papers and
 reference result files on datasets distributed with aeon, evaluated with
-reduced kernel counts so the test suite runs quickly. FROCKS and DROCKS are not
-included, as they fix bugs in the reference code that produced the published
-results.
+reduced kernel counts so the test suite runs quickly. FROCKS, DROCKS, SPROCKET,
+and HIT-ROCKET are not included, as they fix bugs in the reference code that
+produced the published results.
 """
 
 import numpy as np
@@ -16,8 +16,11 @@ from tsml_eval.estimators.classification.convolution_based import (
     DetachRocketClassifier,
     DetachRocketEnsembleClassifier,
     Fed2RCClassifier,
+    FTFVCClassifier,
+    KGMTPClassifier,
     MiniFed2RCClassifier,
     POCKETClassifier,
+    SelFRocketClassifier,
     SRocketClassifier,
 )
 
@@ -32,6 +35,15 @@ from tsml_eval.estimators.classification.convolution_based import (
 # - Detach-ROCKET Ensemble: Uribarri/Solana et al. (2024) BasicMotions 1.0000
 # - Class-wise MiniROCKET: Lo et al. (2026) Table 1 & Table 2 (BasicMotions
 #   1.0000 for CW, ECS CW+L, and ECP CW+L)
+# - FT-FVC: He et al. (2023) Table 1 (GunPoint 1.0000, ItalyPowerDemand 0.9687,
+#   ArrowHead 0.8526)
+# - KG-MTP: https://github.com/WangPanJie2024/KG-MTP
+#   repository UCR results (GunPoint 0.9978, ItalyPowerDemand 0.9610,
+#   ArrowHead 0.8990)
+# - SelF-ROCKET: https://github.com/ANR-MYEL/SelF-Rocket
+#   results/Mean_perf_SR_UCR112_fpc5000_nr10.csv and
+#   results/Mean_perf_HSR_UCR112_fpc5000_nr10.csv (GunPoint 0.9938 / 0.9982,
+#   ItalyPowerDemand 0.9637 / 0.9615)
 PUBLISHED_RESULTS = [
     (Fed2RCClassifier, {"n_kernels": 1000}, "GunPoint", 0.98, 0.002),
     (Fed2RCClassifier, {"n_kernels": 1000}, "ArrowHead", 0.8971428571428571, 0.002),
@@ -119,6 +131,68 @@ PUBLISHED_RESULTS = [
         {"n_kernels": 1680, "channel_selection": None},
         "BasicMotions",
         1.0,
+        0.01,
+    ),
+    (FTFVCClassifier, {"n_kernels": 1000}, "GunPoint", 1.0, 0.01),
+    (FTFVCClassifier, {"n_kernels": 1000}, "ItalyPowerDemand", 0.9687, 0.01),
+    (FTFVCClassifier, {"n_kernels": 1000}, "ArrowHead", 0.8526, 0.02),
+    (
+        KGMTPClassifier,
+        {"n_features": 5000},
+        "GunPoint",
+        0.9977777777777778,
+        0.01,
+    ),
+    (
+        KGMTPClassifier,
+        {"n_features": 5000},
+        "ItalyPowerDemand",
+        0.9609977324263039,
+        0.01,
+    ),
+    (
+        KGMTPClassifier,
+        {"n_features": 5000},
+        "ArrowHead",
+        0.8990476190476191,
+        0.02,
+    ),
+    (
+        SelFRocketClassifier,
+        {"n_kernels": 1000, "n_features_per_split": 1000, "n_runs": 5},
+        "GunPoint",
+        0.9937777777777778,
+        0.01,
+    ),
+    (
+        SelFRocketClassifier,
+        {"n_kernels": 1000, "n_features_per_split": 1000, "n_runs": 5},
+        "ItalyPowerDemand",
+        0.9636540330417882,
+        0.01,
+    ),
+    (
+        SelFRocketClassifier,
+        {
+            "n_kernels": 1000,
+            "n_features_per_split": 1000,
+            "n_runs": 5,
+            "only_mix": True,
+        },
+        "GunPoint",
+        0.9982222222222222,
+        0.01,
+    ),
+    (
+        SelFRocketClassifier,
+        {
+            "n_kernels": 1000,
+            "n_features_per_split": 1000,
+            "n_runs": 5,
+            "only_mix": True,
+        },
+        "ItalyPowerDemand",
+        0.9614512471655328,
         0.01,
     ),
 ]

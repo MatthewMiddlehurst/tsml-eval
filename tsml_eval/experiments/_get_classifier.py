@@ -45,6 +45,16 @@ convolution_based_classifiers = [
         "hdcmrhydra",
     ],
     ["dynamicrocketclassifier", "dynamicrocket", "dynamic-rocket"],
+    ["ftfvcclassifier", "ftfvc", "ft-fvc"],
+    [
+        "ceemdmultirocketclassifier",
+        "ceemdmultirocket",
+        "ceemd-multirocket",
+    ],
+    ["kgmtpclassifier", "kgmtp", "kg-mtp"],
+    ["sprocketclassifier", "sprocket"],
+    ["selfrocketclassifier", "selfrocket", "self-rocket"],
+    ["hitrocketclassifier", "hitrocket", "hit-rocket"],
 ]
 deep_learning_classifiers = [
     ["timecnnclassifier", "timecnn", "cnnclassifier", "cnn"],
@@ -454,6 +464,48 @@ def _set_classifier_convolution_based(
         return DynamicRocketClassifier(
             random_state=random_state, n_jobs=n_jobs, **kwargs
         )
+    elif c == "ftfvcclassifier" or c == "ftfvc" or c == "ft-fvc":
+        from tsml_eval.estimators.classification.convolution_based import (
+            FTFVCClassifier,
+        )
+
+        return FTFVCClassifier(random_state=random_state, n_jobs=n_jobs, **kwargs)
+    elif (
+        c == "ceemdmultirocketclassifier"
+        or c == "ceemdmultirocket"
+        or c == "ceemd-multirocket"
+    ):
+        from tsml_eval.estimators.classification.convolution_based import (
+            CEEMDMultiRocketClassifier,
+        )
+
+        return CEEMDMultiRocketClassifier(
+            random_state=random_state, n_jobs=n_jobs, **kwargs
+        )
+    elif c == "kgmtpclassifier" or c == "kgmtp" or c == "kg-mtp":
+        from tsml_eval.estimators.classification.convolution_based import (
+            KGMTPClassifier,
+        )
+
+        return KGMTPClassifier(random_state=random_state, n_jobs=n_jobs, **kwargs)
+    elif c == "sprocketclassifier" or c == "sprocket":
+        from tsml_eval.estimators.classification.convolution_based import (
+            SPROCKETClassifier,
+        )
+
+        return SPROCKETClassifier(random_state=random_state, n_jobs=n_jobs, **kwargs)
+    elif c == "selfrocketclassifier" or c == "selfrocket" or c == "self-rocket":
+        from tsml_eval.estimators.classification.convolution_based import (
+            SelFRocketClassifier,
+        )
+
+        return SelFRocketClassifier(random_state=random_state, n_jobs=n_jobs, **kwargs)
+    elif c == "hitrocketclassifier" or c == "hitrocket" or c == "hit-rocket":
+        from tsml_eval.estimators.classification.convolution_based import (
+            HITRocketClassifier,
+        )
+
+        return HITRocketClassifier(random_state=random_state, n_jobs=n_jobs, **kwargs)
     else:
         raise ValueError(f"UNKNOWN CLASSIFIER: {c} in get_classifier_by_name")
 
