@@ -3,7 +3,9 @@
 The expected values come from running the reference implementations with aeon's
 Rocket, MiniRocket, and MultiRocket on datasets distributed with aeon, with
 labels encoded in the order of ``classes_``. Kernel counts and iteration
-budgets are reduced where needed so the test suite runs quickly.
+budgets are reduced where needed so the test suite runs quickly. For FROCKS and
+DROCKS, the reference code was run with the same intercept fixes, and for DROCKS
+the same seed list aliasing fix, as the classifiers apply.
 """
 
 import numpy as np
@@ -25,13 +27,13 @@ from tsml_eval.estimators.classification.convolution_based import (
 # Federated ROCKET reference results:
 # classifier, params, dataset, seed, accuracy, rounds, kernels, lambda
 FEDERATED_REFERENCE_RESULTS = [
-    (FROCKSClassifier, {"n_kernels": 100}, "GunPoint", 1, 0.8, 5, 55, None),
+    (FROCKSClassifier, {"n_kernels": 100}, "GunPoint", 1, 0.84, 5, 55, None),
     (
         FROCKSClassifier,
         {"n_kernels": 100},
         "GunPoint",
         2,
-        0.7733333333333333,
+        0.8466666666666667,
         5,
         51,
         None,
@@ -41,7 +43,7 @@ FEDERATED_REFERENCE_RESULTS = [
         {"n_kernels": 40, "max_iter": 100},
         "GunPoint",
         1,
-        0.7266666666666667,
+        0.5266666666666666,
         5,
         40,
         None,
@@ -61,8 +63,8 @@ FEDERATED_REFERENCE_RESULTS = [
         {"n_kernels": 40, "max_iter": 100},
         "ArrowHead",
         1,
-        0.6228571428571429,
-        5,
+        0.6685714285714286,
+        6,
         40,
         None,
     ),
@@ -71,8 +73,8 @@ FEDERATED_REFERENCE_RESULTS = [
         {"n_kernels": 40, "max_iter": 100},
         "ArrowHead",
         2,
-        0.52,
-        7,
+        0.6057142857142858,
+        4,
         40,
         None,
     ),

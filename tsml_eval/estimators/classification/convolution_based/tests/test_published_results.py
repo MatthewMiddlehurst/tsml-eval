@@ -2,7 +2,9 @@
 
 The expected values are published mean test accuracies from the papers and
 reference result files on datasets distributed with aeon, evaluated with
-reduced kernel counts so the test suite runs quickly.
+reduced kernel counts so the test suite runs quickly. FROCKS and DROCKS are not
+included, as they fix bugs in the reference code that produced the published
+results.
 """
 
 import numpy as np
@@ -14,7 +16,6 @@ from tsml_eval.estimators.classification.convolution_based import (
     DetachRocketClassifier,
     DetachRocketEnsembleClassifier,
     Fed2RCClassifier,
-    FROCKSClassifier,
     MiniFed2RCClassifier,
     POCKETClassifier,
     SRocketClassifier,
@@ -23,8 +24,7 @@ from tsml_eval.estimators.classification.convolution_based import (
 # Published accuracy references:
 # - Federated ROCKET: https://github.com/CasellaJr/Fed2RC
 #   results/Fed2RC/IID/1000kernels_results.csv and
-#   results/DAMI/MiniFed2RC/IID/miniIID924.csv, and
-#   https://github.com/MatthiasJakobs/FROCKS results/frocks_results.csv
+#   results/DAMI/MiniFed2RC/IID/miniIID924.csv
 # - S-ROCKET & POCKET: Chen et al. (2024) Table 9 (GunPoint 1.0000,
 #   ItalyPowerDemand 0.9682 / 0.9688, ArrowHead 0.8177 / 0.8183)
 # - Detach-ROCKET: Uribarri et al. (2024) Table 2 & Table 3 (ArrowHead 0.8291,
@@ -43,14 +43,6 @@ PUBLISHED_RESULTS = [
         0.002,
     ),
     (MiniFed2RCClassifier, {"n_kernels": 924}, "GunPoint", 0.98, 0.002),
-    (FROCKSClassifier, {"n_kernels": 1000}, "GunPoint", 0.9386666666666666, 0.002),
-    (
-        FROCKSClassifier,
-        {"n_kernels": 1000},
-        "ItalyPowerDemand",
-        0.9529640427599612,
-        0.002,
-    ),
     (SRocketClassifier, {"n_kernels": 1000, "n_epochs": 300}, "GunPoint", 1.0, 0.015),
     (
         SRocketClassifier,
