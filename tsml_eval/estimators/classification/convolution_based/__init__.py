@@ -16,8 +16,10 @@ __all__ = [
     "HDCMultiRocketHydraClassifier",
     "HITRocketClassifier",
     "KGMTPClassifier",
+    "MASHTClassifier",
     "MiniFed2RCClassifier",
     "POCKETClassifier",
+    "RocketPFNClassifier",
     "SelFRocketClassifier",
     "SPROCKETClassifier",
     "SRocketClassifier",
@@ -68,11 +70,17 @@ from tsml_eval.estimators.classification.convolution_based._hit_rocket import (
 from tsml_eval.estimators.classification.convolution_based._kg_mtp import (
     KGMTPClassifier,
 )
+from tsml_eval.estimators.classification.convolution_based._masht import (
+    MASHTClassifier,
+)
 from tsml_eval.estimators.classification.convolution_based._minifed2rc import (
     MiniFed2RCClassifier,
 )
 from tsml_eval.estimators.classification.convolution_based._pocket import (
     POCKETClassifier,
+)
+from tsml_eval.estimators.classification.convolution_based._rocket_pfn import (
+    RocketPFNClassifier,
 )
 from tsml_eval.estimators.classification.convolution_based._s_rocket import (
     SRocketClassifier,

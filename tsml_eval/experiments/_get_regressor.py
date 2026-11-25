@@ -12,6 +12,7 @@ convolution_based_regressors = [
     ["multirocket", "multi-rocket", "multirocketregressor"],
     ["hydraregressor", "hydra"],
     ["multirockethydraregressor", "multirockethydra", "multirocket-hydra"],
+    ["rocketxgboostregressor", "rocketxgboost", "rocket-xgboost"],
 ]
 deep_learning_regressors = [
     ["timecnnregressor", "timecnn", "cnnregressor", "cnn"],
@@ -203,6 +204,14 @@ def _set_regressor_convolution_based(
         from aeon.regression.convolution_based import MultiRocketHydraRegressor
 
         return MultiRocketHydraRegressor(
+            random_state=random_state, n_jobs=n_jobs, **kwargs
+        )
+    elif r == "rocketxgboostregressor" or r == "rocketxgboost" or r == "rocket-xgboost":
+        from tsml_eval.estimators.regression.convolution_based import (
+            RocketXGBoostRegressor,
+        )
+
+        return RocketXGBoostRegressor(
             random_state=random_state, n_jobs=n_jobs, **kwargs
         )
 

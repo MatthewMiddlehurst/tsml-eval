@@ -55,6 +55,8 @@ convolution_based_classifiers = [
     ["sprocketclassifier", "sprocket"],
     ["selfrocketclassifier", "selfrocket", "self-rocket"],
     ["hitrocketclassifier", "hitrocket", "hit-rocket"],
+    ["rocketpfnclassifier", "rocketpfn", "rocket-pfn"],
+    ["mashtclassifier", "masht"],
 ]
 deep_learning_classifiers = [
     ["timecnnclassifier", "timecnn", "cnnclassifier", "cnn"],
@@ -506,6 +508,18 @@ def _set_classifier_convolution_based(
         )
 
         return HITRocketClassifier(random_state=random_state, n_jobs=n_jobs, **kwargs)
+    elif c == "rocketpfnclassifier" or c == "rocketpfn" or c == "rocket-pfn":
+        from tsml_eval.estimators.classification.convolution_based import (
+            RocketPFNClassifier,
+        )
+
+        return RocketPFNClassifier(random_state=random_state, n_jobs=n_jobs, **kwargs)
+    elif c == "mashtclassifier" or c == "masht":
+        from tsml_eval.estimators.classification.convolution_based import (
+            MASHTClassifier,
+        )
+
+        return MASHTClassifier(random_state=random_state, n_jobs=n_jobs, **kwargs)
     else:
         raise ValueError(f"UNKNOWN CLASSIFIER: {c} in get_classifier_by_name")
 

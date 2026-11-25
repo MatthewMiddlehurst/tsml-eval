@@ -28,8 +28,10 @@ Misc estimators for use with `tsml-eval`.
     estimators.classification.convolution_based.HDCMultiRocketHydraClassifier
     estimators.classification.convolution_based.HITRocketClassifier
     estimators.classification.convolution_based.KGMTPClassifier
+    estimators.classification.convolution_based.MASHTClassifier
     estimators.classification.convolution_based.MiniFed2RCClassifier
     estimators.classification.convolution_based.POCKETClassifier
+    estimators.classification.convolution_based.RocketPFNClassifier
     estimators.classification.convolution_based.SelFRocketClassifier
     estimators.classification.convolution_based.SPROCKETClassifier
     estimators.classification.convolution_based.SRocketClassifier
@@ -38,6 +40,7 @@ Misc estimators for use with `tsml-eval`.
     estimators.clustering.consensus.FromFileIterativeVotingClustering
     estimators.clustering.consensus.SimpleVote
     estimators.clustering.consensus.FromFileSimpleVote
+    estimators.regression.convolution_based.RocketXGBoostRegressor
 ```
 
 ## Evaluation: [tsml_eval.evaluation](https://github.com/time-series-machine-learning/tsml-eval/tree/main/tsml_eval/evaluation)
