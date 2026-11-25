@@ -9,10 +9,10 @@ from aeon.transformations.collection.convolution_based import MiniRocket, Rocket
 from sklearn.utils import check_random_state
 
 from tsml_eval.estimators.classification.convolution_based._selection_utils import (
-    _apply_rocket_kernels,
     _check_numba_jobs,
     _L2NormalisedRidgeClassifierCV,
     _prune_rocket_kernels,
+    _rocket_transform,
 )
 
 
@@ -181,16 +181,13 @@ class SRocketClassifier(BaseClassifier):
 
         X_clean = np.nan_to_num(X, nan=0.0)
         if transform_type in ("rocket", "rocket-ppvmax"):
-            trf = Rocket(
+            self._rocket = Rocket(
                 n_kernels=self.n_kernels,
                 n_jobs=self._n_jobs,
                 random_state=trf_seed,
             ).fit(X_clean)
-            self._rocket_normalise = trf.normalise
-            full_kernels = trf.kernels
-            Xt = _apply_rocket_kernels(
-                X_clean, full_kernels, self._rocket_normalise, self._n_jobs
-            ).astype(np.float64)
+            full_kernels = self._rocket.kernels
+            Xt = self._rocket.transform(X_clean).astype(np.float64)
             if transform_type == "rocket":
                 Xt = np.ascontiguousarray(Xt[:, ::2])
                 group_size = 1
@@ -281,9 +278,9 @@ class SRocketClassifier(BaseClassifier):
         X_clean = np.nan_to_num(X, nan=0.0)
         transform_type = self.rocket_transform.lower()
         if transform_type in ("rocket", "rocket-ppvmax"):
-            Xt = _apply_rocket_kernels(
-                X_clean, self._pruned_kernels, self._rocket_normalise, self._n_jobs
-            ).astype(np.float64)
+            Xt = _rocket_transform(self._rocket, X_clean, self._pruned_kernels).astype(
+                np.float64
+            )
             if transform_type == "rocket":
                 Xt = Xt[:, ::2]
             return Xt

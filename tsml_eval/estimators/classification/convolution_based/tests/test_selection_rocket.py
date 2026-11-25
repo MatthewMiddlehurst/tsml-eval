@@ -16,8 +16,8 @@ from tsml_eval.estimators.classification.convolution_based._cw_minirocket import
     _detect_knee_channels,
 )
 from tsml_eval.estimators.classification.convolution_based._selection_utils import (
-    _apply_rocket_kernels,
     _prune_rocket_kernels,
+    _rocket_transform,
 )
 
 
@@ -32,10 +32,11 @@ def test_prune_rocket_kernels_matches_subset():
     mask = np.zeros(15, dtype=bool)
     mask[[1, 4, 7, 13]] = True
     pruned = _prune_rocket_kernels(rocket.kernels, mask)
-    pruned_out = _apply_rocket_kernels(X, pruned, rocket.normalise, 1)
+    pruned_out = _rocket_transform(rocket, X, pruned)
 
     feat_mask = np.repeat(mask, 2)
-    np.testing.assert_allclose(pruned_out, full_out[:, feat_mask])
+    np.testing.assert_array_equal(pruned_out, full_out[:, feat_mask])
+    np.testing.assert_array_equal(rocket.transform(X), full_out)
 
 
 @pytest.mark.parametrize("rocket_transform", ["rocket", "rocket-ppvmax", "minirocket"])

@@ -16,11 +16,11 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.utils import check_random_state
 
 from tsml_eval.estimators.classification.convolution_based._selection_utils import (
-    _apply_rocket_kernels,
     _check_numba_jobs,
     _prune_rocket_kernels,
     _quiet_ridge_warnings,
     _retrain_optimal_ridge,
+    _rocket_transform,
     _select_optimal_pruning,
     _sequential_feature_detachment,
 )
@@ -236,32 +236,17 @@ class DetachRocketClassifier(BaseClassifier):
         X_tr_clean = self._preprocess_series(X_tr, transform_type)
 
         if transform_type == "rocket":
-            self._transformer = Rocket(
-                n_kernels=self.n_kernels,
-                n_jobs=self._n_jobs,
-                random_state=trf_seed,
-            ).fit(X_tr_clean)
-            self._rocket_normalise = self._transformer.normalise
-            feat_tr = _apply_rocket_kernels(
-                X_tr_clean,
-                self._transformer.kernels,
-                self._rocket_normalise,
-                self._n_jobs,
-            )
+            transformer = Rocket
         elif transform_type == "minirocket":
-            self._transformer = MiniRocket(
-                n_kernels=self.n_kernels,
-                n_jobs=self._n_jobs,
-                random_state=trf_seed,
-            ).fit(X_tr_clean)
-            feat_tr = np.asarray(self._transformer.transform(X_tr_clean))
+            transformer = MiniRocket
         else:
-            self._transformer = MultiRocket(
-                n_kernels=self.n_kernels,
-                n_jobs=self._n_jobs,
-                random_state=trf_seed,
-            ).fit(X_tr_clean)
-            feat_tr = np.asarray(self._transformer.transform(X_tr_clean))
+            transformer = MultiRocket
+        self._transformer = transformer(
+            n_kernels=self.n_kernels,
+            n_jobs=self._n_jobs,
+            random_state=trf_seed,
+        ).fit(X_tr_clean)
+        feat_tr = np.asarray(self._transformer.transform(X_tr_clean))
 
         scaler = StandardScaler(with_mean=True)
         feat_tr_scaled = scaler.fit_transform(feat_tr)
@@ -269,15 +254,7 @@ class DetachRocketClassifier(BaseClassifier):
         use_val = effective_percentage is None and X_val is not None
         if use_val:
             X_val_clean = self._preprocess_series(X_val, transform_type)
-            if transform_type == "rocket":
-                feat_val = _apply_rocket_kernels(
-                    X_val_clean,
-                    self._transformer.kernels,
-                    self._rocket_normalise,
-                    self._n_jobs,
-                )
-            else:
-                feat_val = np.asarray(self._transformer.transform(X_val_clean))
+            feat_val = np.asarray(self._transformer.transform(X_val_clean))
             feat_val_scaled = scaler.transform(feat_val)
         else:
             feat_val_scaled = None
@@ -358,9 +335,7 @@ class DetachRocketClassifier(BaseClassifier):
         transform_type = self.rocket_transform.lower()
         X_clean = self._preprocess_series(X, transform_type)
         if transform_type == "rocket":
-            Xt = _apply_rocket_kernels(
-                X_clean, self._pruned_kernels, self._rocket_normalise, self._n_jobs
-            )
+            Xt = _rocket_transform(self._transformer, X_clean, self._pruned_kernels)
             Xt_sel = Xt[:, self._pruned_submask]
         else:
             Xt = np.asarray(self._transformer.transform(X_clean))

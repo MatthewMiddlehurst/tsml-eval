@@ -10,10 +10,10 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.utils import check_random_state
 
 from tsml_eval.estimators.classification.convolution_based._selection_utils import (
-    _apply_rocket_kernels,
     _check_numba_jobs,
     _L2NormalisedRidgeClassifierCV,
     _prune_rocket_kernels,
+    _rocket_transform,
 )
 
 _DEFAULT_K_GRID = (10.0, 1.0, 0.1, 0.01, 100.0, 1000.0)
@@ -161,16 +161,13 @@ class POCKETClassifier(BaseClassifier):
 
         X_clean = np.nan_to_num(X, nan=0.0)
         if transform_type in ("rocket", "rocket-ppv"):
-            trf = Rocket(
+            self._rocket = Rocket(
                 n_kernels=self.n_kernels,
                 n_jobs=self._n_jobs,
                 random_state=seed,
             ).fit(X_clean)
-            self._rocket_normalise = trf.normalise
-            full_kernels = trf.kernels
-            Xt_raw = _apply_rocket_kernels(
-                X_clean, full_kernels, self._rocket_normalise, self._n_jobs
-            ).astype(np.float64)
+            full_kernels = self._rocket.kernels
+            Xt_raw = self._rocket.transform(X_clean).astype(np.float64)
             if transform_type == "rocket-ppv":
                 Xt_raw = np.ascontiguousarray(Xt_raw[:, ::2])
                 group_size = 1
@@ -281,9 +278,9 @@ class POCKETClassifier(BaseClassifier):
         X_clean = np.nan_to_num(X, nan=0.0)
         transform_type = self.rocket_transform.lower()
         if transform_type in ("rocket", "rocket-ppv"):
-            Xt = _apply_rocket_kernels(
-                X_clean, self._pruned_kernels, self._rocket_normalise, self._n_jobs
-            ).astype(np.float64)
+            Xt = _rocket_transform(self._rocket, X_clean, self._pruned_kernels).astype(
+                np.float64
+            )
             if transform_type == "rocket-ppv":
                 Xt = Xt[:, ::2]
             return Xt

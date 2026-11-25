@@ -2,14 +2,13 @@
 
 __maintainer__ = ["MatthewMiddlehurst"]
 
+import copy
 import warnings
 from contextlib import contextmanager
 
 import numpy as np
-from aeon.transformations.collection import Normalizer
-from aeon.transformations.collection.convolution_based._rocket import _apply_kernels
 from aeon.utils.validation import check_n_jobs
-from numba import config, get_num_threads, set_num_threads
+from numba import config
 from scipy.linalg import LinAlgWarning
 from sklearn.linear_model import RidgeClassifier, RidgeClassifierCV
 
@@ -76,18 +75,18 @@ def _prune_rocket_kernels(kernels, kernel_mask):
     )
 
 
-def _apply_rocket_kernels(X, kernels, normalise, n_jobs):
-    """Apply a ROCKET kernel tuple to ``X`` with controlled numba threads."""
-    if normalise:
-        X = Normalizer().fit_transform(X)
-    X = np.asarray(X, dtype=np.float64)
+def _rocket_transform(rocket, X, kernels=None):
+    """Transform ``X`` with a fitted ``Rocket``, optionally using other kernels.
 
-    prev_threads = get_num_threads()
-    set_num_threads(min(n_jobs, config.NUMBA_NUM_THREADS))
-    try:
-        return _apply_kernels(X, kernels)
-    finally:
-        set_num_threads(prev_threads)
+    Going through ``Rocket.transform`` keeps the normalisation, input dtype and
+    threading of the installed aeon version, so the features match those of the
+    full transform used by the reference code. ``kernels`` replaces the fitted
+    kernel tuple, e.g. with one pruned by ``_prune_rocket_kernels``.
+    """
+    if kernels is not None:
+        rocket = copy.copy(rocket)
+        rocket.kernels = kernels
+    return rocket.transform(X)
 
 
 class _L2NormalisedRidgeClassifierCV:
