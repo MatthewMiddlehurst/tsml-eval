@@ -86,6 +86,12 @@ class DetachRocketEnsembleClassifier(BaseClassifier):
     --------
     DetachRocketClassifier
 
+    Notes
+    -----
+    Member seeds are drawn from ``[0, 2**32 - 1)`` as in the reference code. aeon
+    versions before 1.6 cast integer seeds for MiniRocket and MultiRocket to int32,
+    which fails for seeds of ``2**31`` and above, so aeon 1.6 or later is required.
+
     References
     ----------
     .. [1] Solana, Alvaro, Erik Fransen, and Gonzalo Uribarri. "Classification
@@ -103,17 +109,18 @@ class DetachRocketEnsembleClassifier(BaseClassifier):
     >>> X, y = make_example_3d_numpy(n_cases=20, n_channels=3, random_state=0)
     >>> clf = DetachRocketEnsembleClassifier(
     ...     n_estimators=3, n_kernels=84, n_steps=10, random_state=0
-    ... )
-    >>> clf.fit(X, y)
+    ... )  # doctest: +SKIP
+    >>> clf.fit(X, y)  # doctest: +SKIP
     DetachRocketEnsembleClassifier(n_estimators=3, n_kernels=84, n_steps=10,
                                    random_state=0)
-    >>> y_pred = clf.predict(X)
+    >>> y_pred = clf.predict(X)  # doctest: +SKIP
     """
 
     _tags = {
         "capability:multivariate": True,
         "capability:multithreading": True,
         "algorithm_type": "convolution",
+        "python_dependencies": "aeon>=1.6.0",
     }
 
     def __init__(

@@ -3,14 +3,21 @@
 __maintainer__ = ["MatthewMiddlehurst"]
 __all__ = ["RocketXGBoostRegressor"]
 
+import threading
+
 import numpy as np
 from aeon.regression import BaseRegressor
 from aeon.transformations.collection import Normalizer
 from aeon.transformations.collection.convolution_based import Rocket
-from aeon.utils._parallel import _NUMBA_PARALLEL_LOCK
 from aeon.utils.validation import check_n_jobs
 from numba import config, get_num_threads, njit, prange, set_num_threads
 from sklearn.utils import check_random_state
+
+try:
+    # aeon >= 1.6 serialises its own numba thread changes with this lock.
+    from aeon.utils._parallel import _NUMBA_PARALLEL_LOCK
+except ImportError:
+    _NUMBA_PARALLEL_LOCK = threading.Lock()
 
 
 class RocketXGBoostRegressor(BaseRegressor):

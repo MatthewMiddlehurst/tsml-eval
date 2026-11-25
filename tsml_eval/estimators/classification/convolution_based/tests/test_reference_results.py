@@ -296,6 +296,13 @@ def test_selection_reference_results(
     classifier, params, dataset, seed, expected_acc, expected_attrs
 ):
     """Test selection fits match reference accuracy and learned attributes."""
+    deps = classifier.get_class_tag("python_dependencies")
+    if deps is not None and not _check_soft_dependencies(deps, severity="none"):
+        pytest.skip("skip test if required soft dependency not available")
+    if classifier is DetachRocketClassifier and not _check_soft_dependencies(
+        "aeon>=1.6.0", severity="none"
+    ):
+        pytest.skip("reference values use the aeon>=1.6 float32 Rocket transform")
     X_train, y_train = load_classification(dataset, split="train")
     X_test, y_test = load_classification(dataset, split="test")
 
@@ -417,10 +424,9 @@ def test_representation_reference_results(
     classifier, params, dataset, seed, expected_acc, expected_attrs
 ):
     """Test representation fits match reference accuracy and learned attributes."""
-    if classifier is HITRocketClassifier and not _check_soft_dependencies(
-        "torch>=2.0", severity="none"
-    ):
-        pytest.skip("torch is required for HITRocketClassifier")
+    deps = classifier.get_class_tag("python_dependencies")
+    if deps is not None and not _check_soft_dependencies(deps, severity="none"):
+        pytest.skip("skip test if required soft dependency not available")
 
     X_train, y_train = load_classification(dataset, split="train")
     X_test, y_test = load_classification(dataset, split="test")

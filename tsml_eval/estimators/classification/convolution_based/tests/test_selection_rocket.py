@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 from aeon.testing.data_generation import make_example_3d_numpy
 from aeon.transformations.collection.convolution_based import Rocket
+from aeon.utils.validation._dependencies import _check_soft_dependencies
 
 from tsml_eval.estimators.classification.convolution_based import (
     ClassWiseMiniRocketClassifier,
@@ -128,6 +129,10 @@ def test_detach_rocket_small_imbalanced_fallback():
     assert set(clf_mr.predict(X)) <= set(y)
 
 
+@pytest.mark.skipif(
+    not _check_soft_dependencies("aeon>=1.6.0", severity="none"),
+    reason="skip test if required soft dependency not available",
+)
 @pytest.mark.parametrize("rocket_transform", ["minirocket", "multirocket", "rocket"])
 @pytest.mark.parametrize("voting", ["soft", "hard"])
 def test_detach_rocket_ensemble_and_channel_relevance(rocket_transform, voting):
@@ -231,10 +236,11 @@ def test_parameter_validation_errors():
     with pytest.raises(ValueError, match="multiclass_type"):
         DetachRocketClassifier(multiclass_type="invalid").fit(X, y)
 
-    with pytest.raises(ValueError, match="voting"):
-        DetachRocketEnsembleClassifier(voting="invalid").fit(X, y)
-    with pytest.raises(ValueError, match="n_kernels"):
-        DetachRocketEnsembleClassifier(n_kernels=0).fit(X, y)
+    if _check_soft_dependencies("aeon>=1.6.0", severity="none"):
+        with pytest.raises(ValueError, match="voting"):
+            DetachRocketEnsembleClassifier(voting="invalid").fit(X, y)
+        with pytest.raises(ValueError, match="n_kernels"):
+            DetachRocketEnsembleClassifier(n_kernels=0).fit(X, y)
 
     with pytest.raises(ValueError, match="n_kernels"):
         ClassWiseMiniRocketClassifier(n_kernels=0).fit(X, y)
@@ -259,6 +265,9 @@ def test_numba_thread_cap_respected(monkeypatch):
         DetachRocketEnsembleClassifier,
         ClassWiseMiniRocketClassifier,
     ]:
+        deps = cls.get_class_tag("python_dependencies")
+        if deps is not None and not _check_soft_dependencies(deps, severity="none"):
+            continue
         clf = cls(**cls._get_test_params(), n_jobs=-1, random_state=0).fit(X, y)
         assert clf._n_jobs == 1
         assert len(clf.predict(X)) == len(y)

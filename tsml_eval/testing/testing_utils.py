@@ -50,6 +50,7 @@ def _check_set_method(
                 exempt_errors = [
                     "optional dependency",
                     "soft dependency",
+                    "incompatible version",
                     "python version",
                     "No module named 'xgboost'",
                     "No module named 'tsml'",

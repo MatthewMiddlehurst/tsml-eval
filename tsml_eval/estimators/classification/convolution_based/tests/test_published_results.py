@@ -10,6 +10,7 @@ produced the published results.
 import numpy as np
 import pytest
 from aeon.datasets import load_classification
+from aeon.utils.validation._dependencies import _check_soft_dependencies
 
 from tsml_eval.estimators.classification.convolution_based import (
     ClassWiseMiniRocketClassifier,
@@ -203,6 +204,9 @@ PUBLISHED_RESULTS = [
 )
 def test_published_results(classifier, params, dataset, expected, tolerance):
     """Test the mean accuracy over seeds 1 to 5 is close to the published value."""
+    deps = classifier.get_class_tag("python_dependencies")
+    if deps is not None and not _check_soft_dependencies(deps, severity="none"):
+        pytest.skip("skip test if required soft dependency not available")
     X_train, y_train = load_classification(dataset, split="train")
     X_test, y_test = load_classification(dataset, split="test")
 
